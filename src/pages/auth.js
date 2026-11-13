@@ -28,8 +28,8 @@ export function renderAuth(app, { onLogin }) {
         </div>
 
         <form class="stack" data-form="masuk" novalidate>
-          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:6px">Murid masuk dengan NIS. Guru masuk dengan username.</p></div>
-          <div class="field"><label for="f-id">NIS atau username</label><input class="input" id="f-id" name="id" autocomplete="username" required /></div>
+          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:6px">Murid masuk dengan NIS. Guru masuk dengan username atau email.</p></div>
+          <div class="field"><label for="f-id">NIS, username, atau email</label><input class="input" id="f-id" name="id" autocomplete="username" required /></div>
           ${pwField('password', 'Password')}
           <button class="btn primary block" type="submit">Masuk</button>
           <p class="small muted">Lupa password? Murid dapat meminta guru untuk meresetnya dengan verifikasi tanggal lahir.</p>

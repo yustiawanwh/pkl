@@ -7,7 +7,11 @@ export const sb = createClient(SUPABASE_URL || 'https://belum-diatur.supabase.co
 });
 
 // NIS / username -> email internal (tidak pernah dikirimi email)
-export const toEmail = (id) => `${String(id).trim().toLowerCase().replace(/\s+/g, '')}@${EMAIL_DOMAIN}`;
+// Bila yang diketik sudah berupa alamat email lengkap (mis. Gmail admin), dipakai apa adanya.
+export const toEmail = (id) => {
+  const v = String(id).trim().toLowerCase().replace(/\s+/g, '');
+  return v.includes('@') ? v : `${v}@${EMAIL_DOMAIN}`;
+};
 
 export const state = { session: null, profile: null, settings: {} };
 
