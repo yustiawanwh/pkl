@@ -787,3 +787,11 @@ td.nowrap, .nowrap { white-space: nowrap; }
   .auth-main { padding: 28px 22px 36px; }
   .auth-board { padding: 28px 22px 40px; }
 }
+
+/* Form masuk/daftar: rata atas dengan jarak tetap, agar tab & judul tidak
+   melompat saat berganti tab (kontinuitas). Jarak = posisi form daftar bila
+   ditengahkan pada layar laptop umum. */
+.auth-main { place-items: start center; align-content: start; padding-top: clamp(40px, 12vh, 128px); }
+@media (max-width: 860px) {
+  .auth-main { padding-top: 28px; }
+}

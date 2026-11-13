@@ -37,7 +37,7 @@ export function renderAuth(app, { onLogin }) {
           <div><h2>Daftar akun murid</h2><p class="muted" style="margin-top:8px">Tanggal lahir dipakai guru untuk memverifikasi saat kamu lupa password.</p></div>
           <div class="field"><label for="f-nama">Nama lengkap</label><input class="input" id="f-nama" name="nama" autocomplete="name" required /></div>
           <div class="grid-2">
-            <div class="field"><label for="f-nis">NIS</label><input class="input" id="f-nis" name="nis" placeholder="Contoh: 9999.9999/999.99" required /></div>
+            <div class="field"><label for="f-nis">NIS</label><input class="input" id="f-nis" name="nis" placeholder="9999.9999/999.99" required /></div>
             <div class="field"><label for="f-kelas">Kelas</label>
               ${kelasList.length
                 ? `<select class="select" id="f-kelas" name="kelas" required><option value="">Pilih kelas</option>${kelasList.map((k) => `<option>${esc(k)}</option>`).join('')}</select>`
