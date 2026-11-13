@@ -1,24 +1,22 @@
 import { sb, state, toEmail, loadProfile } from '../lib/supa.js';
-import { $, esc, icon, toast, errMsg, withBusy, pwField, pwToggle, ticket } from '../lib/ui.js';
+import { $, esc, icon, toast, errMsg, withBusy, pwField, pwToggle, fmtTanggal, today } from '../lib/ui.js';
 import { NAMA_SEKOLAH } from '../config.js';
 
 export function renderAuth(app, { onLogin }) {
   const kelasList = state.settings.daftar_kelas || [];
-  const contoh = { status: 'disetujui', judul: 'Sistem Inventaris Gudang Berbasis Web', tanggal: nextWeekday(), jam_mulai: '09:00', jam_selesai: '09:20', ruang: 'Lab RPL 2', percobaan: 1 };
+  const pg = state.settings.pengumuman || {};
 
   app.innerHTML = `<div class="auth">
     <section class="auth-side">
       <div>
-        <div class="brand"><div class="logo">${icon('slides')}</div><span>${esc(NAMA_SEKOLAH)} · RPL</span></div>
+        <div class="brand"><div class="logo">${icon('slides')}</div><div><div>${esc(NAMA_SEKOLAH)}</div><div class="brand-prog">Rekayasa Perangkat Lunak</div></div></div>
         <h1>Presentasi PKL, dari pengajuan sampai nilai.</h1>
         <p class="lead">Ajukan jadwal presentasi, unggah laporan dan slide, lalu pantau hasil penilaian dari guru di satu tempat.</p>
-        <div class="auth-steps"><ol>
-          <li><span class="n">1</span><span><b>Daftar dan lengkapi data diri</b>, termasuk tempat PKL dan judul project.</span></li>
-          <li><span class="n">2</span><span><b>Ajukan jadwal</b> dengan draft laporan, PPT, dan lembar bimbingan.</span></li>
-          <li><span class="n">3</span><span><b>Presentasi dan lihat hasilnya</b>, lengkap dengan feedback guru.</span></li>
-        </ol></div>
+        ${pg.aktif && pg.isi ? `<div class="board-note">${icon('info')}<div><b>Pengumuman</b><p>${esc(pg.isi)}</p></div></div>` : ''}
       </div>
-      <div class="auth-ticket">${ticket(contoh)}</div>
+    </section>
+    <section class="auth-board" aria-label="Informasi jadwal presentasi">
+      <div class="board" data-board aria-live="polite"><div class="board-loading"><span class="spinner sm"></span> Memuat informasi jadwal…</div></div>
     </section>
     <section class="auth-main">
       <div class="auth-card stack-lg">
@@ -58,6 +56,7 @@ export function renderAuth(app, { onLogin }) {
   </div>`;
 
   pwToggle(app);
+  muatPapan($('[data-board]', app));
   app.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
     app.querySelectorAll('[data-tab]').forEach((x) => x.classList.toggle('on', x === b));
     app.querySelectorAll('[data-form]').forEach((f) => f.classList.toggle('hidden', f.dataset.form !== b.dataset.tab));
@@ -111,8 +110,27 @@ export function renderAuth(app, { onLogin }) {
   });
 }
 
-function nextWeekday() {
-  const d = new Date(); d.setDate(d.getDate() + 3);
-  while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// Papan informasi publik: hanya angka, jam, dan ruang (tanpa nama & nilai)
+async function muatPapan(el) {
+  const { data, error } = await sb.rpc('info_publik');
+  if (error || !data) { el.innerHTML = ''; return; }
+  const d = data;
+  const pct = d.total_murid ? Math.round((d.selesai / d.total_murid) * 100) : 0;
+  el.innerHTML = `
+    <div class="board-progress">
+      <div class="row between"><span><b>${d.selesai}</b> dari ${d.total_murid} murid selesai presentasi</span><b>${pct}%</b></div>
+      <div class="board-bar"><i style="width:${pct}%"></i></div>
+    </div>
+    <dl class="board-stats">
+      <div><dt>Mengajukan</dt><dd>${d.mengajukan}</dd></div>
+      <div><dt>Menunggu verifikasi</dt><dd>${d.menunggu}</dd></div>
+      <div><dt>Terverifikasi</dt><dd>${d.diverifikasi}</dd></div>
+      <div><dt>Terjadwal</dt><dd>${d.terjadwal}</dd></div>
+    </dl>
+    <div class="board-today">
+      <div class="row between"><b>Presentasi hari ini</b><span class="board-muted">${esc(fmtTanggal(today()))}</span></div>
+      ${d.hari_ini.length ? `<ul>${d.hari_ini.map((x) => `<li><span class="bt-time">${esc(x.jam_mulai)}–${esc(x.jam_selesai)}</span><span>${esc(x.ruang || 'Ruang belum diisi')}</span><span class="board-muted">${x.jumlah} murid</span></li>`).join('')}</ul>`
+        : '<p class="board-muted">Tidak ada presentasi hari ini.</p>'}
+    </div>
+    <p class="board-foot">${d.slot_kosong ? `${icon('calendar')}<span>Masih ada <b>${d.slot_kosong} tempat kosong</b>, mulai ${esc(fmtTanggal(d.slot_berikutnya, false))}.</span>` : `${icon('calendar')}<span>Belum ada slot jadwal yang dibuka.</span>`}</p>`;
 }

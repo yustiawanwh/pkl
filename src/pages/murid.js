@@ -198,7 +198,7 @@ export async function pengajuan(view, ctx) {
     <div class="page-head"><div><h1>Pengajuan presentasi</h1><p>${esc(p.nama)} · ${esc(p.kelas)} · ${esc(p.dudi)}</p></div>
       <a class="btn ghost" href="#/murid/poin">${icon('list')} Poin presentasi</a></div>
     ${latest ? `<section class="cols" style="margin-bottom:24px">
-        <div class="stack">${ticket(latest, { extra })}</div>
+        <div class="stack-lg">${ticket(latest, { extra })}<section data-hari-ini class="hidden"></section></div>
         <aside class="card stack">
           <h3>Status</h3>${timeline(latest)}
           <h3>Berkas</h3>${daftarBerkas(latest)}
@@ -207,6 +207,7 @@ export async function pengajuan(view, ctx) {
         </aside></section>` : ''}
     ${bisaAjukan ? `<section data-form-wrap><div class="card-head"><div><h2>${esc(head)}</h2><p>${esc(intro)}</p></div></div><div data-form></div></section>` : ''}
     ${selesai ? `<div class="callout ok">${icon('check')}<span>Presentasimu sudah selesai dinilai. Lihat nilai dan feedback di halaman <a href="#/murid/hasil">Hasil</a>.</span></div>` : ''}
+    ${latest ? '' : '<section data-hari-ini class="hidden" style="margin-bottom:24px"></section>'}
     ${list.length > 1 ? `<section style="margin-top:32px"><h2 style="margin-bottom:12px">Riwayat pengajuan</h2>
       <div class="table-wrap"><table class="t"><thead><tr><th>Diajukan</th><th>Jadwal</th><th>Percobaan</th><th>Status</th><th>Feedback</th></tr></thead><tbody>
       ${list.slice(1).map((r) => `<tr><td>${esc(fmtWaktu(r.created_at))}</td><td>${esc(fmtTanggal(r.tanggal, false))}, ${esc(fmtJam(r.jam_mulai))}</td><td>${r.percobaan}</td><td>${badge(r.status)}</td><td class="small">${esc(r.feedback || '-')}</td></tr>`).join('')}
@@ -220,7 +221,24 @@ export async function pengajuan(view, ctx) {
     ctx.go('#/murid/pengajuan');
   });
 
+  kartuHariIni($('[data-hari-ini]', view));
   if (bisaAjukan) await formPengajuan($('[data-form]', view), ctx);
+}
+
+// Kartu "Presentasi hari ini": hanya muncul bila ada jadwal hari ini
+async function kartuHariIni(el) {
+  const { data } = await sb.rpc('papan_murid');
+  const list = data?.hari_ini || [];
+  if (!list.length) return;
+  const me = state.profile.nama;
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="card stack">
+    <div class="card-head"><div><h2>Presentasi hari ini</h2><p>${esc(fmtTanggal(today()))}</p></div><span class="badge plain disetujui">${list.length} murid</span></div>
+    <div class="list">${list.map((x) => `<div class="list-item static">
+      <span class="time-chip ${x.sudah ? 'done' : ''}"><b>${esc(x.jam_mulai)}</b><span>${esc(x.jam_selesai)}</span></span>
+      <span class="li-main"><span class="li-name"><b>${esc(x.nama)}</b>${x.nama === me ? '<span class="badge plain disetujui">Kamu</span>' : ''}</span><span>${esc(x.kelas || '')}</span></span>
+      <span class="li-aside"><span>${esc(x.ruang || '-')}</span>${x.sudah ? '<span class="badge selesai">Sudah presentasi</span>' : ''}</span></div>`).join('')}</div>
+  </div>`;
 }
 
 async function formPengajuan(root, ctx) {

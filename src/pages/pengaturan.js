@@ -5,10 +5,18 @@ export async function pengaturan(view, ctx) {
   const mode = state.settings.mode_penguji === 'banyak' ? 'banyak' : 'tunggal';
   let kelas = [...(state.settings.daftar_kelas || [])];
   let poin = structuredClone(state.settings.poin_presentasi || []);
+  const pg = state.settings.pengumuman || { aktif: false, isi: '' };
 
   view.innerHTML = `
     <div class="page-head"><div><h1>Pengaturan</h1><p>Atur cara penilaian, daftar kelas, poin presentasi, dan akun guru.</p></div></div>
     <div class="stack-lg">
+      <section class="card stack" data-pg>
+        <div class="card-title-row"><div><h2>Pengumuman di halaman awal</h2><p class="muted small mt-xs">Tampil di halaman masuk dan bisa dibaca siapa saja, termasuk yang belum login. Jangan tulis nama atau nilai murid.</p></div>
+          <label class="switch on-primary"><input type="checkbox" name="pg_aktif" ${pg.aktif ? 'checked' : ''} /> Tampilkan</label></div>
+        <textarea class="textarea" name="pg_isi" maxlength="500" placeholder="Mis. Batas pengajuan jadwal presentasi: Jumat, 20 November 2026.">${esc(pg.isi || '')}</textarea>
+        <div class="row between"><span class="hint" data-pg-count></span><button class="btn primary" data-save-pg>${icon('check')} Simpan pengumuman</button></div>
+      </section>
+
       <section class="card stack">
         <div><h2>Mode penguji</h2><p class="muted small" style="margin-top:4px">Menentukan siapa yang mengisi Komponen A pada setiap presentasi.</p></div>
         <div class="grid-2">
@@ -39,6 +47,18 @@ export async function pengaturan(view, ctx) {
         <div data-guru></div>
       </section>` : ''}
     </div>`;
+
+  // ---- pengumuman
+  const pgEl = $('[data-pg]', view);
+  const cnt = () => ($('[data-pg-count]', pgEl).textContent = `${pgEl.querySelector('[name=pg_isi]').value.length}/500 karakter`);
+  pgEl.querySelector('[name=pg_isi]').addEventListener('input', cnt); cnt();
+  $('[data-save-pg]', pgEl).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
+    const isi = pgEl.querySelector('[name=pg_isi]').value.trim();
+    const aktif = pgEl.querySelector('[name=pg_aktif]').checked;
+    if (aktif && !isi) return toast('Tulis isi pengumuman, atau matikan "Tampilkan".', 'err');
+    try { await saveSetting('pengumuman', { aktif, isi }); toast(aktif ? 'Pengumuman tampil di halaman awal.' : 'Pengumuman disimpan dan disembunyikan.'); }
+    catch (err) { toast(errMsg(err), 'err'); }
+  }));
 
   // ---- mode penguji
   $$('[name=mode]', view).forEach((r) => r.addEventListener('change', async () => {
