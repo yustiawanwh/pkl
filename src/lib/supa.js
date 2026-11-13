@@ -20,8 +20,9 @@ export const state = { session: null, profile: null, settings: {} };
 export async function loadProfile() {
   const uid = state.session?.user?.id;
   if (!uid) { state.profile = null; return null; }
-  const { data, error } = await sb.from('profiles').select('*').eq('id', uid).single();
+  const { data, error } = await sb.from('profiles').select('*').eq('id', uid).maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Akun ini sudah tidak terdaftar.');
   state.profile = data;
   return data;
 }

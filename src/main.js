@@ -207,7 +207,7 @@ async function boot() {
     await loadSettings();
     if (state.session) {
       try { await loadProfile(); } catch (e) {
-        toast('Profil tidak ditemukan. Hubungi admin.', 'err');
+        toast('Akun ini sudah tidak terdaftar atau dihapus. Silakan daftar ulang atau hubungi guru.', 'err');
         await sb.auth.signOut(); state.session = null;
       }
     }

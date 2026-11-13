@@ -4,6 +4,7 @@ import {
   INDIKATOR_A, KOMPLEKSITAS, PORSI, KESELARASAN, ATURAN_B, PERTANYAAN_PEMANDU, sumA, lengkapA, predikat, levelOf, fmtNilai,
 } from '../lib/rubrik.js';
 import { daftarBerkas } from './murid.js';
+import { notFound } from './guru.js';
 import { NAMA_SEKOLAH } from '../config.js';
 
 const SEL = '*, murid:profiles!pengajuan_murid_id_fkey(id, nama, nis, kelas, dudi, kompleksitas, porsi), hasil(*), penilaian(*)';
@@ -62,8 +63,9 @@ export async function daftarPenilaian(view) {
 // =====================================================================
 export async function formNilai(view, ctx) {
   const id = Number(ctx.params[0]);
-  const { data: r, error } = await sb.from('pengajuan').select(SEL).eq('id', id).single();
+  const { data: r, error } = await sb.from('pengajuan').select(SEL).eq('id', id).maybeSingle();
   if (error) throw error;
+  if (!r) return notFound(view, '#/guru/penilaian', 'Kembali ke daftar penilaian');
   if (!['disetujui', 'selesai', 'remidi'].includes(r.status)) {
     view.innerHTML = `<div class="card">${emptyState('alert', 'Belum bisa dinilai', 'Pengajuan ini harus disetujui terlebih dahulu.', `<a class="btn ghost" href="#/guru/pengajuan/${id}">Buka pengajuan</a>`)}</div>`;
     return;

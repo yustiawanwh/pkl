@@ -62,6 +62,7 @@ export function errMsg(e) {
   if (/User already registered|already been registered/i.test(m)) return 'NIS ini sudah terdaftar. Silakan masuk.';
   if (/Password should be at least/i.test(m)) return 'Password minimal 6 karakter.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+  if (/coerce the result to a single JSON object|PGRST116/i.test(m)) return 'Data tidak ditemukan. Mungkin sudah dihapus.';
   if (/pengajuan_satu_aktif/.test(m)) return 'Kamu masih punya pengajuan yang aktif.';
   return m;
 }

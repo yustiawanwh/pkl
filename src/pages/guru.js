@@ -117,8 +117,9 @@ export async function daftarPengajuan(view) {
 // =====================================================================
 export async function detailPengajuan(view, ctx) {
   const id = Number(ctx.params[0]);
-  const { data: r, error } = await sb.from('pengajuan').select(SEL).eq('id', id).single();
+  const { data: r, error } = await sb.from('pengajuan').select(SEL).eq('id', id).maybeSingle();
   if (error) throw error;
+  if (!r) return notFound(view);
   const m = r.murid || {};
   const { data: riwayat } = await sb.from('pengajuan').select('id, status, tanggal, jam_mulai, percobaan, created_at, feedback').eq('murid_id', r.murid_id).neq('id', id).order('created_at', { ascending: false });
   let verifier = null;
@@ -194,6 +195,12 @@ export async function detailPengajuan(view, ctx) {
       md.close(); toast('Jadwal dipindah.'); ctx.go(`#/guru/pengajuan/${id}`);
     }));
   });
+}
+
+export function notFound(view, back = '#/guru/pengajuan', label = 'Kembali ke daftar pengajuan') {
+  view.innerHTML = `<div class="card">${emptyState('alert', 'Data tidak ditemukan',
+    'Pengajuan ini sudah tidak ada. Biasanya karena akun muridnya telah dihapus.',
+    `<a class="btn primary" href="${back}">${esc(label)}</a>`)}</div>`;
 }
 
 // =====================================================================
