@@ -1,0 +1,19 @@
+{
+  "name": "pkl-presentasi",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/obfuscate.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.1",
+    "vite": "^5.4.0"
+  }
+}
