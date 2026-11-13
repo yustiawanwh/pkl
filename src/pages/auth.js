@@ -22,11 +22,11 @@ export function renderAuth(app, { onLogin }) {
       <div class="auth-card stack-lg">
         <div class="tabs" role="tablist">
           <button role="tab" class="on" data-tab="masuk">Masuk</button>
-          <button role="tab" data-tab="daftar">Daftar murid</button>
+          <button role="tab" data-tab="daftar">Daftar</button>
         </div>
 
         <form class="stack" data-form="masuk" novalidate>
-          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:8px">Murid masuk dengan NIS. Guru masuk dengan username atau email.</p></div>
+          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:8px">Masuk dengan NIS dan password. Belum punya akun? Pilih Daftar.</p></div>
           <div class="field"><label for="f-id">NIS, username, atau email</label><input class="input" id="f-id" name="id" autocomplete="username" required /></div>
           ${pwField('password', 'Password')}
           <button class="btn primary block" type="submit">Masuk</button>
