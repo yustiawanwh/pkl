@@ -241,7 +241,9 @@ export async function jadwal(view, ctx) {
         const mine = s.guru_id === state.profile.id;
         return slotCard(s, {
           tag: 'div', cls: 'static',
-          aside: `${sisaBadge(s)}${(mine || isAdmin()) ? `<button class="btn icon sm ghost" data-del="${s.id}" aria-label="Hapus slot" title="Hapus slot">${icon('trash')}</button>` : ''}`,
+          aside: `${sisaBadge(s)}${(mine || isAdmin()) ? `<span class="slot-actions">
+            <button class="btn icon sm ghost" data-edit-slot="${s.id}" aria-label="Ubah slot" title="Ubah slot">${icon('edit')}</button>
+            <button class="btn icon sm ghost" data-del="${s.id}" ${s.terpakai ? 'disabled title="Slot sudah dipakai murid"' : 'title="Hapus slot"'} aria-label="Hapus slot">${icon('trash')}</button></span>` : ''}`,
           extra: bs.length
             ? bs.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${esc(b.murid?.kelas || '')}</span></a>`).join('')
             : '<span class="muted small">Belum ada murid</span>',
@@ -249,6 +251,7 @@ export async function jadwal(view, ctx) {
       }).join('')}</div>` : emptyState('calendar', 'Belum ada slot', 'Tambahkan slot agar murid bisa memilih jadwal di tanggal ini.')}
       ${loose.length ? `<h3 class="mt">Presentasi lain di tanggal ini</h3><div class="list">${loose.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${fmtJam(b.jam_mulai)}</span></a>`).join('')}</div>` : ''}`;
     $('[data-add-day]', view).addEventListener('click', () => formSlot(d));
+    $$('[data-edit-slot]', view).forEach((b) => b.addEventListener('click', () => formSlot(d, ds.find((x) => x.id === Number(b.dataset.editSlot)))));
     $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
       if (!(await confirmDialog('Hapus slot ini?', { ok: 'Hapus', danger: true }))) return;
       const { error } = await sb.from('slots').delete().eq('id', b.dataset.del);
@@ -272,25 +275,39 @@ export async function jadwal(view, ctx) {
   });
   showDay(sel);
 
-  const formSlot = (tgl = sel) => {
+  // Tambah slot baru, atau ubah slot yang sudah ada (edit)
+  const formSlot = (tgl = sel, edit = null) => {
+    const v = edit
+      ? { tanggal: edit.tanggal, mulai: fmtJam(edit.jam_mulai), selesai: fmtJam(edit.jam_selesai), ruang: edit.ruang || '', kapasitas: edit.kapasitas, catatan: edit.catatan || '' }
+      : { tanggal: tgl, mulai: '08:00', selesai: '08:20', ruang: '', kapasitas: 1, catatan: '' };
+    const dipakai = edit?.terpakai || 0;
     const md = modal({
-      title: 'Tambah slot',
-      body: `<form class="stack" id="fs">
-        <div class="field"><label>Tanggal</label><input class="input" type="date" name="tanggal" value="${tgl}" min="${today()}" required /></div>
-        <div class="grid-2"><div class="field"><label>Jam mulai</label><input class="input" type="time" name="mulai" value="08:00" required /></div>
-          <div class="field"><label>Jam selesai</label><input class="input" type="time" name="selesai" value="08:20" required /></div></div>
-        <div class="grid-2"><div class="field"><label>Ruang</label><input class="input" name="ruang" placeholder="Lab RPL 1" /></div>
-          <div class="field"><label>Kapasitas murid</label><input class="input" type="number" name="kapasitas" value="1" min="1" max="50" /></div></div>
-        <div class="field"><label>Catatan <span class="muted">(opsional)</span></label><input class="input" name="catatan" placeholder="Mis. daring via Meet" /></div>
+      title: edit ? 'Ubah slot' : 'Tambah slot',
+      body: `<form class="stack" id="fs" novalidate>
+        ${dipakai ? `<div class="callout info small">${icon('info')}<span>${dipakai} murid sudah terdaftar di slot ini. Bila tanggal, jam, atau ruang diubah, jadwal mereka ikut berubah dan mereka mendapat notifikasi.</span></div>` : ''}
+        <div class="field"><label for="fs-tgl">Tanggal</label><input class="input" id="fs-tgl" type="date" name="tanggal" value="${esc(v.tanggal)}" min="${edit && v.tanggal < today() ? esc(v.tanggal) : today()}" required /></div>
+        <div class="grid-2"><div class="field"><label for="fs-m">Jam mulai</label><input class="input" id="fs-m" type="time" name="mulai" value="${esc(v.mulai)}" required /></div>
+          <div class="field"><label for="fs-s">Jam selesai</label><input class="input" id="fs-s" type="time" name="selesai" value="${esc(v.selesai)}" required /></div></div>
+        <div class="grid-2"><div class="field"><label for="fs-r">Ruang</label><input class="input" id="fs-r" name="ruang" value="${esc(v.ruang)}" placeholder="Lab RPL 1" /></div>
+          <div class="field"><label for="fs-k">Kapasitas murid</label><input class="input" id="fs-k" type="number" name="kapasitas" value="${v.kapasitas}" min="${Math.max(1, dipakai)}" max="50" />
+          ${dipakai ? `<span class="hint">Minimal ${dipakai} (murid yang sudah terdaftar)</span>` : ''}</div></div>
+        <div class="field"><label for="fs-c">Catatan <span class="muted">(opsional)</span></label><input class="input" id="fs-c" name="catatan" value="${esc(v.catatan)}" placeholder="Mis. daring via Meet" /></div>
       </form>`,
-      footer: '<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-save>Simpan slot</button>',
+      footer: `<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-save>${edit ? 'Simpan perubahan' : 'Simpan slot'}</button>`,
     });
     $('[data-save]', md.el).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
       const f = Object.fromEntries(new FormData($('#fs', md.el)));
-      if (!f.tanggal || f.selesai <= f.mulai) return toast('Periksa tanggal dan jam. Jam selesai harus setelah jam mulai.', 'err');
-      const { error } = await sb.from('slots').insert({ tanggal: f.tanggal, jam_mulai: f.mulai, jam_selesai: f.selesai, ruang: f.ruang || null, kapasitas: Number(f.kapasitas) || 1, catatan: f.catatan || null });
+      if (!f.tanggal || !f.mulai || !f.selesai || f.selesai <= f.mulai) return toast('Periksa tanggal dan jam. Jam selesai harus setelah jam mulai.', 'err');
+      const kap = Number(f.kapasitas) || 1;
+      if (kap < dipakai) return toast(`Kapasitas minimal ${dipakai}, sesuai murid yang sudah terdaftar.`, 'err');
+      const row = { tanggal: f.tanggal, jam_mulai: f.mulai, jam_selesai: f.selesai, ruang: f.ruang.trim() || null, kapasitas: kap, catatan: f.catatan.trim() || null };
+      const { error } = edit
+        ? await sb.from('slots').update(row).eq('id', edit.id)
+        : await sb.from('slots').insert(row);
       if (error) return toast(errMsg(error), 'err');
-      md.close(); toast('Slot ditambahkan.'); sel = f.tanggal; cal.select(sel); await refresh();
+      md.close();
+      toast(edit ? (dipakai ? 'Slot diubah. Murid yang terdaftar sudah diberi tahu.' : 'Slot diubah.') : 'Slot ditambahkan.');
+      sel = f.tanggal; cal.select(sel); await refresh();
     }));
   };
 

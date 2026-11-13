@@ -537,16 +537,20 @@ dl.kv dd { margin: 0; font-weight: 500; }
 .slot:disabled { cursor: not-allowed; background: var(--surface-2); }
 .slot:disabled .slot-time { color: var(--ink-3); }
 .slot.static { cursor: default; }
-.slot-time { grid-area: time; font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.slot-time { font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .slot-sep { color: var(--ink-3); padding: 0 2px; }
-.slot-aside { grid-area: aside; display: flex; align-items: center; gap: var(--s2); justify-self: end; }
-.slot-meta { grid-area: meta; display: flex; flex-wrap: wrap; gap: 2px var(--s4); font-size: 13px; color: var(--ink-2); }
+.slot-aside { display: flex; align-items: center; gap: var(--s2); justify-self: end; }
+.slot-meta { display: flex; flex-wrap: wrap; gap: 2px var(--s4); font-size: 13px; color: var(--ink-2); }
 .slot-meta > span { display: inline-flex; align-items: center; gap: 6px; }
 .slot-meta svg.i { width: 14px; height: 14px; color: var(--ink-3); }
-.slot-extra { grid-area: extra; display: grid; gap: var(--s2); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px dashed var(--line); }
+.slot-extra { display: grid; gap: var(--s2); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px dashed var(--line); }
 .booking { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: 13.5px; color: var(--ink); }
 .booking:hover { text-decoration: none; }
 .booking:hover b { color: var(--primary); }
+
+/* posisi grid hanya berlaku di dalam kartu slot */
+.slot > .slot-time { grid-area: time; } .slot > .slot-aside { grid-area: aside; }
+.slot > .slot-meta { grid-area: meta; } .slot > .slot-extra { grid-area: extra; }
 
 /* ---- Baris daftar ---- */
 .list { display: grid; gap: var(--s2); }
@@ -631,3 +635,93 @@ dl.kv dd { margin: 0; font-weight: 500; }
   table.responsive td > * { grid-column: 2; }
   table.responsive td:first-child > *, table.responsive td.no-label > * { grid-column: 1; }
 }
+.slot-actions { display: inline-flex; gap: 2px; }
+.slot-actions .btn:disabled { opacity: .35; }
+
+/* =====================================================================
+   Riwayat & progres
+   ===================================================================== */
+.mt-lg { margin-top: var(--s5); }
+.fw-500 { font-weight: 500; }
+.stack-sm { display: grid; gap: var(--s2); }
+.overview-top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s5); flex-wrap: wrap; }
+.big-num { font-family: var(--display); font-size: 52px; font-weight: 800; line-height: 1; margin-top: var(--s2); }
+.big-num span { font-size: 24px; color: var(--ink-3); margin-left: 2px; }
+.mini-stats { display: grid; grid-template-columns: repeat(4, auto); gap: var(--s5); margin: 0; }
+.mini-stats div { display: grid; gap: 2px; }
+.mini-stats dt { font-size: 12.5px; color: var(--ink-3); }
+.mini-stats dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
+.progress-stack { display: flex; height: 14px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--surface-2); }
+.progress-stack i { display: block; min-width: 6px; }
+.tahap-legend { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.tahap-chip {
+  display: inline-flex; align-items: center; gap: var(--s2); min-height: 32px; padding: 0 12px;
+  border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.tahap-chip i, .badge.tahap i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.tahap-chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.tahap-chip:hover { border-color: var(--c); }
+.tahap-chip.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); color: var(--ink); }
+.badge.tahap { background: color-mix(in srgb, var(--c) 14%, var(--surface)); color: var(--ink); }
+
+.hist { list-style: none; margin: 0; padding: 0; display: grid; }
+.hist-item { display: grid; grid-template-columns: 16px 1fr; gap: var(--s3); padding-bottom: var(--s4); position: relative; }
+.hist-item::before { content: ''; position: absolute; left: 7px; top: 18px; bottom: 0; width: 2px; background: var(--line); }
+.hist-item:last-child::before { display: none; }
+.hist-dot { width: 16px; height: 16px; border-radius: 50%; margin-top: 2px; background: var(--ink-3); box-shadow: 0 0 0 3px var(--surface); }
+.hist-dot.menunggu { background: var(--marigold); } .hist-dot.disetujui { background: var(--primary); }
+.hist-dot.selesai { background: var(--mint); } .hist-dot.ditolak, .hist-dot.remidi { background: var(--rose); }
+.hist-score { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; padding: var(--s2) var(--s3); background: var(--surface-2); border-radius: var(--radius-sm); }
+.hist-score b { font-family: var(--display); font-size: 22px; }
+
+@media (max-width: 860px) {
+  .mini-stats { grid-template-columns: repeat(2, 1fr); gap: var(--s3); width: 100%; }
+  .big-num { font-size: 40px; }
+}
+
+/* =====================================================================
+   Laporan cetak (PDF)
+   ===================================================================== */
+#print-root { display: none; }
+@media print {
+  body > *:not(#print-root) { display: none !important; }
+  html, body { background: #fff !important; }
+  #print-root { display: block; }
+  .rp { padding: 0 3px; color: #111; font-family: 'Plus Jakarta Sans', Arial, sans-serif; font-size: 9.5pt; line-height: 1.4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp-kop { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 2.5px double #1B2340; }
+  .rp-logo { width: 38px; height: 38px; border-radius: 8px; background: #2F5BEA; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 10pt; }
+  .rp-school { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 14pt; font-weight: 800; color: #1B2340; }
+  .rp-prog { font-size: 9pt; color: #555; }
+  .rp-title { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 15pt; text-align: center; margin: 14px 0 2px; color: #1B2340; }
+  .rp-sub { text-align: center; color: #555; font-size: 8.5pt; margin-bottom: 12px; }
+  .rp-h2 { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 11pt; margin: 14px 0 6px; color: #1B2340; }
+  .rp-summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 10px; }
+  .rp-summary div { border: 1px solid #C9CFDD; border-radius: 6px; padding: 6px 8px; display: grid; }
+  .rp-summary span { font-size: 8pt; color: #555; }
+  .rp-summary b { font-size: 13pt; color: #1B2340; }
+  .rp-summary small { font-size: 8pt; color: #1F9D74; font-weight: 700; }
+  .rp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; align-items: start; }
+  .rp-table { width: 100%; border-collapse: collapse; }
+  .rp-table th, .rp-table td { border: 0.6pt solid #B8BFCE; padding: 4px 6px; vertical-align: top; text-align: left; }
+  .rp-table th { background: #E6ECFD; color: #1B2340; font-weight: 700; font-size: 8.5pt; }
+  .rp-table thead { display: table-header-group; }
+  .rp-table tr { break-inside: avoid; }
+  .rp-table .n { text-align: right; white-space: nowrap; }
+  .rp-table .nw { white-space: nowrap; }
+  .rp-table tbody tr:nth-child(even) td { background: #F7F9FC; }
+  .rp-table .rp-sum td { font-weight: 700; background: #EEF2F9 !important; }
+  .rp-id { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .rp-id td { border: 0.6pt solid #B8BFCE; padding: 4px 6px; vertical-align: top; }
+  .rp-id td:nth-child(odd) { background: #F1F4FA; color: #444; width: 15%; font-weight: 600; }
+  .rp-notes { margin-top: 10px; } .rp-notes td:first-child { width: 22%; } .rp-notes td:last-child { white-space: pre-wrap; background: #fff; }
+  .rp-final { margin-top: 8px; border: 1.5px solid #2F5BEA; border-radius: 8px; padding: 8px 12px; display: flex; align-items: baseline; gap: 10px; }
+  .rp-final b { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 20pt; color: #2F5BEA; }
+  .rp-note { font-size: 8pt; color: #555; margin-top: 8px; }
+  .rp-ttd { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 22px; break-inside: avoid; text-align: center; }
+  .rp-sign { height: 58px; }
+  .rp-line { border-top: 0.8pt solid #333; padding-top: 3px; margin: 0 30px; font-weight: 600; }
+}
+td.nowrap, .nowrap { white-space: nowrap; }
+.hist-item > .stack-sm { min-width: 0; }
+.hist-item .slot-meta { display: flex; }
+.hist-score { justify-self: start; }
