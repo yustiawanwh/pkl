@@ -88,8 +88,8 @@ export async function formNilai(view, ctx) {
   const opt = (obj, v) => `<option value="">Pilih</option>` + Object.keys(obj).map((k) => `<option ${v === k ? 'selected' : ''}>${esc(k)}</option>`).join('');
 
   view.innerHTML = `
-    <div class="page-head"><div><a href="#/guru/penilaian" class="small">${icon('chevl')} Daftar penilaian</a>
-      <h1 style="margin-top:8px">${esc(m.nama)}</h1>
+    <div class="page-head"><div><a href="#/guru/penilaian" class="back">${icon('chevl')} Daftar penilaian</a>
+      <h1>${esc(m.nama)}</h1>
       <p>${esc(m.kelas)} · ${esc(m.dudi)} · ${esc(fmtTanggal(r.tanggal))}, ${fmtJam(r.jam_mulai)}${r.percobaan > 1 ? ` · percobaan ke-${r.percobaan}` : ''}</p></div>
       <div class="row">${badge(r.status)}<span class="badge plain">${mode === 'banyak' ? 'Mode beberapa penguji' : 'Mode penguji tunggal'}</span></div></div>
 
@@ -111,7 +111,7 @@ export async function formNilai(view, ctx) {
         </section>
 
         <section class="stack">
-          <div><h2>Komponen A · kualitas presentasi dan pemahaman</h2><p class="muted small" style="margin-top:4px">70 poin, standar sama untuk semua murid. Klik tingkat untuk mengisi skor teratasnya, lalu sesuaikan angkanya.</p></div>
+          <div><h2>Komponen A: kualitas presentasi dan pemahaman</h2><p class="muted small" style="margin-top:4px">70 poin, standar sama untuk semua murid. Klik tingkat untuk mengisi skor teratasnya, lalu sesuaikan angkanya.</p></div>
           ${lockA ? `<div class="callout info">${icon('info')}<span>Mode penguji tunggal: Komponen A sudah diisi oleh <b>${esc(names[others[0].penguji_id] || 'guru lain')}</b>. Anda masih bisa melengkapi Komponen B dan evaluasi.</span></div>` : ''}
           ${INDIKATOR_A.map((ind, n) => `
             <div class="indikator" data-ind="${ind.key}">
@@ -121,13 +121,13 @@ export async function formNilai(view, ctx) {
                   <input class="input" type="number" inputmode="numeric" min="0" max="${ind.bobot}" name="${ind.key}" value="${aVals[ind.key] ?? ''}" ${lockA ? 'disabled' : ''} /><span>/ ${ind.bobot}</span></label>
               </div>
               <div class="levels">${ind.level.map(([lo, hi, nm, desc], li) => `
-                <button type="button" class="level" data-lv="${li}" data-hi="${hi}" ${lockA ? 'disabled' : ''}><b>${nm} · ${lo === hi ? lo : `${lo}–${hi}`}</b>${esc(desc)}</button>`).join('')}</div>
+                <button type="button" class="level" data-lv="${li}" data-hi="${hi}" ${lockA ? 'disabled' : ''}><span class="level-top"><b>${nm}</b><span class="level-range">${lo === hi ? lo : `${lo}–${hi}`}</span></span>${esc(desc)}</button>`).join('')}</div>
             </div>`).join('')}
           ${mode === 'banyak' ? `<div class="field"><label for="f-cp">Catatan penguji (pribadi)</label><textarea class="textarea" id="f-cp" name="catatan_penguji" ${lockA ? 'disabled' : ''}>${esc(mine?.catatan || '')}</textarea></div>` : ''}
         </section>
 
         <section class="card stack">
-          <div><h2>Komponen B · tingkat tantangan pekerjaan</h2><p class="muted small" style="margin-top:4px">30 poin, dari profil murid dan bukti DUDI, bukan dari penampilan saat presentasi. Klaim murid: ${esc(m.kompleksitas)} / ${esc(m.porsi)}.</p></div>
+          <div><h2>Komponen B: tingkat tantangan pekerjaan</h2><p class="muted small" style="margin-top:4px">30 poin, dari profil murid dan bukti DUDI, bukan dari penampilan saat presentasi. Klaim murid: ${esc(m.kompleksitas)} / ${esc(m.porsi)}.</p></div>
           <div class="grid-3">
             <div class="field"><label for="f-k">Kompleksitas pekerjaan</label><select class="select" id="f-k" name="kompleksitas">${opt(KOMPLEKSITAS, b.kompleksitas)}</select>
               <div class="score-in"><input class="input" type="number" name="b1" value="${b.b1}" /><span>/ 15</span></div><span class="hint" data-r="b1"></span></div>
@@ -317,13 +317,13 @@ export async function rekap(view) {
       <div class="stat ok"><b>${fmtNilai(tot.length ? Math.max(...tot) : null)}</b><span>Tertinggi</span></div>
       <div class="stat bad"><b>${fmtNilai(tot.length ? Math.min(...tot) : null)}</b><span>Terendah</span></div>
     </div>
-    ${dinilai.length ? `<div class="card" style="margin-bottom:18px"><div class="row between"><b>Sebaran predikat</b><span class="small muted">${dinilai.filter((r) => r.remidi).length} murid remidi</span></div>
-      <div class="meter" style="height:14px;margin-top:10px">${dist.map((n, i) => n ? `<i style="width:${(n / dinilai.length) * 100}%;background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}" title="${['A', 'B', 'C', 'D'][i]}: ${n}"></i>` : '').join('')}</div>
+    ${dinilai.length ? `<div class="card" style="margin-bottom:16px"><div class="row between"><b>Sebaran predikat</b><span class="small muted">${dinilai.filter((r) => r.remidi).length} murid remidi</span></div>
+      <div class="meter" style="height:14px;margin-top:12px">${dist.map((n, i) => n ? `<i style="width:${(n / dinilai.length) * 100}%;background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}" title="${['A', 'B', 'C', 'D'][i]}: ${n}"></i>` : '').join('')}</div>
       <div class="cal-legend">${['A (90–100)', 'B (80–89)', 'C (70–79)', 'D (<70)'].map((l, i) => `<span><i style="background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}"></i>${l}: ${dist[i]}</span>`).join('')}</div></div>` : ''}`;
     $('[data-list]', view).innerHTML = rs.length ? `<div class="table-wrap"><table class="t">
-      <thead><tr><th>No</th><th>Murid</th><th>DUDI</th><th class="num">Nilai A</th><th class="num">Nilai B</th><th class="num">Nilai akhir</th><th>Predikat</th><th></th></tr></thead><tbody>
-      ${rs.map((r, i) => `<tr>
-        <td>${i + 1}</td><td><div class="who"><b>${esc(r.nama)}</b><span>${esc(r.kelas || '')} · NIS ${esc(r.nis || '')}</span></div></td>
+      <thead><tr><th>Murid</th><th>DUDI</th><th class="num">Nilai A</th><th class="num">Nilai B</th><th class="num">Nilai akhir</th><th>Predikat</th><th></th></tr></thead><tbody>
+      ${rs.map((r) => `<tr>
+        <td><div class="who"><b>${esc(r.nama)}</b><span>${esc(r.kelas || '')} · NIS ${esc(r.nis || '')}</span></div></td>
         <td class="small">${esc(r.dudi || '-')}</td>
         <td class="num">${fmtNilai(r.nilai_a)}</td><td class="num">${fmtNilai(r.nilai_b)}</td>
         <td class="num"><b>${fmtNilai(r.total)}</b></td>

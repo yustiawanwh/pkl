@@ -28,7 +28,7 @@ export function renderAuth(app, { onLogin }) {
         </div>
 
         <form class="stack" data-form="masuk" novalidate>
-          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:6px">Murid masuk dengan NIS. Guru masuk dengan username atau email.</p></div>
+          <div><h2>Selamat datang kembali</h2><p class="muted" style="margin-top:8px">Murid masuk dengan NIS. Guru masuk dengan username atau email.</p></div>
           <div class="field"><label for="f-id">NIS, username, atau email</label><input class="input" id="f-id" name="id" autocomplete="username" required /></div>
           ${pwField('password', 'Password')}
           <button class="btn primary block" type="submit">Masuk</button>
@@ -36,7 +36,7 @@ export function renderAuth(app, { onLogin }) {
         </form>
 
         <form class="stack hidden" data-form="daftar" novalidate>
-          <div><h2>Daftar akun murid</h2><p class="muted" style="margin-top:6px">Tanggal lahir dipakai guru untuk memverifikasi saat kamu lupa password.</p></div>
+          <div><h2>Daftar akun murid</h2><p class="muted" style="margin-top:8px">Tanggal lahir dipakai guru untuk memverifikasi saat kamu lupa password.</p></div>
           <div class="field"><label for="f-nama">Nama lengkap</label><input class="input" id="f-nama" name="nama" autocomplete="name" required /></div>
           <div class="grid-2">
             <div class="field"><label for="f-nis">NIS</label><input class="input" id="f-nis" name="nis" placeholder="Contoh: 9999.9999/999.99" required /></div>

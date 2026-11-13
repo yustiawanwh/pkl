@@ -1,7 +1,7 @@
 import { sb, state, callAdmin, isAdmin } from '../lib/supa.js';
 import {
   $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, modal, fmtTanggal, fmtJam, fmtWaktu, today, badge,
-  ticket, emptyState, initials, pwField, pwToggle, isoDate, parseDate,
+  ticket, emptyState, initials, pwField, pwToggle, isoDate, parseDate, slotCard, sisaBadge, listItem,
 } from '../lib/ui.js';
 import { KOMPLEKSITAS, PORSI } from '../lib/rubrik.js';
 import { calendar, monthRange } from '../lib/calendar.js';
@@ -41,19 +41,25 @@ export async function beranda(view) {
     <div class="cols even">
       <section class="card">
         <div class="card-head"><div><h2>Perlu diverifikasi</h2><p>Pengajuan terbaru dari murid</p></div><a class="btn sm ghost" href="#/guru/pengajuan">Semua</a></div>
-        ${menunggu.length ? `<div class="slot-list">${menunggu.slice(0, 6).map((r) => `
-          <a class="slot" href="#/guru/pengajuan/${r.id}" style="text-decoration:none;color:inherit">
-            <span class="avatar">${esc(initials(r.murid?.nama))}</span>
-            <span class="info">${who(r.murid)}</span>
-            <span class="small muted">${esc(jadwalStr(r))}</span></a>`).join('')}</div>`
+        ${menunggu.length ? `<div class="list">${menunggu.slice(0, 6).map((r) => listItem({
+            href: `#/guru/pengajuan/${r.id}`,
+            lead: `<span class="avatar">${esc(initials(r.murid?.nama))}</span>`,
+            title: esc(r.murid?.nama), sub: esc(r.murid?.kelas || ''),
+            aside: `<b>${esc(parseDate(r.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }))}</b><span>${fmtJam(r.jam_mulai)}</span>`,
+          })).join('')}</div>`
           : emptyState('check', 'Semua sudah diverifikasi', 'Pengajuan baru akan muncul di sini.')}
       </section>
       <section class="card">
         <div class="card-head"><div><h2>Jadwal terdekat</h2><p>Presentasi yang sudah disetujui</p></div><a class="btn sm ghost" href="#/guru/jadwal">Kalender</a></div>
-        ${terjadwal.filter((r) => r.tanggal >= t).length ? `<div class="slot-list">${terjadwal.filter((r) => r.tanggal >= t).slice(0, 6).map((r) => `
-          <a class="slot" href="#/guru/nilai/${r.id}" style="text-decoration:none;color:inherit">
-            <span class="tm">${r.tanggal === t ? 'Hari ini' : esc(parseDate(r.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }))}<br><span class="small muted">${fmtJam(r.jam_mulai)}</span></span>
-            <span class="info">${who(r.murid)}</span>${icon('chevr')}</a>`).join('')}</div>`
+        ${terjadwal.filter((r) => r.tanggal >= t).length ? `<div class="list">${terjadwal.filter((r) => r.tanggal >= t).slice(0, 6).map((r) => {
+            const d = parseDate(r.tanggal);
+            return listItem({
+              href: `#/guru/nilai/${r.id}`,
+              lead: `<span class="date-chip ${r.tanggal === t ? 'today' : ''}"><b>${d.getDate()}</b><span>${esc(d.toLocaleDateString('id-ID', { month: 'short' }))}</span></span>`,
+              title: esc(r.murid?.nama), sub: esc(r.murid?.kelas || ''),
+              aside: `<b>${fmtJam(r.jam_mulai)}</b><span>${esc(r.ruang || '')}</span>`,
+            });
+          }).join('')}</div>`
           : emptyState('calendar', 'Belum ada jadwal', 'Setujui pengajuan untuk mengisi jadwal presentasi.')}
       </section>
     </div>`;
@@ -119,8 +125,8 @@ export async function detailPengajuan(view, ctx) {
   if (r.diverifikasi_oleh) ({ data: verifier } = await sb.from('profiles').select('nama').eq('id', r.diverifikasi_oleh).maybeSingle());
 
   view.innerHTML = `
-    <div class="page-head"><div><a href="#/guru/pengajuan" class="small">${icon('chevl')} Kembali ke daftar</a><h1 style="margin-top:8px">${esc(m.nama)}</h1>
-      <p>${esc(m.kelas)} · NIS ${esc(m.nis)} · ${esc(m.dudi)}</p></div>
+    <div class="page-head"><div><a href="#/guru/pengajuan" class="back">${icon('chevl')} Daftar pengajuan</a><h1>${esc(m.nama)}</h1>
+      <p>${esc(m.kelas)}, NIS ${esc(m.nis)}, ${esc(m.dudi)}</p></div>
       ${['disetujui', 'selesai', 'remidi'].includes(r.status) ? `<a class="btn primary" href="#/guru/nilai/${r.id}">${icon('clipboard')} ${r.hasil?.dipublikasi ? 'Lihat penilaian' : 'Nilai presentasi'}</a>` : ''}</div>
     <div class="cols">
       <div class="stack-lg">
@@ -179,7 +185,7 @@ export async function detailPengajuan(view, ctx) {
     const free = (sl || []).filter((s) => s.id !== r.slot_id && s.terpakai < s.kapasitas);
     const md = modal({
       title: 'Pindah jadwal',
-      body: free.length ? `<div class="slot-list">${free.map((s) => `<button class="slot" data-s="${s.id}"><span class="tm">${fmtJam(s.jam_mulai)}–${fmtJam(s.jam_selesai)}</span><span class="info"><b>${esc(fmtTanggal(s.tanggal))}</b><br>${esc(s.ruang || '')} ${esc(s.guru_nama || '')}</span><span class="badge plain selesai">${s.kapasitas - s.terpakai} kosong</span></button>`).join('')}</div>`
+      body: free.length ? `<div class="slot-list">${free.map((s) => slotCard(s, { attrs: `data-s="${s.id}"`, aside: sisaBadge(s), showDate: true })).join('')}</div>`
         : emptyState('calendar', 'Tidak ada slot kosong', 'Buka slot baru di menu Jadwal & slot.'),
     });
     $$('[data-s]', md.el).forEach((b) => b.addEventListener('click', async () => {
@@ -202,7 +208,7 @@ export async function jadwal(view, ctx) {
   view.innerHTML = `
     <div class="page-head"><div><h1>Jadwal & slot</h1><p>Buka slot waktu ketika Anda tersedia menguji. Murid hanya bisa memilih slot yang masih kosong, jadi jadwal tidak akan bentrok.</p></div>
       <div class="row"><button class="btn ghost" data-gen>${icon('layers')} Buat banyak slot</button><button class="btn primary" data-add>${icon('plus')} Tambah slot</button></div></div>
-    <div class="cols" style="grid-template-columns:400px minmax(0,1fr)">
+    <div class="cols cal-layout">
       <div class="card sticky"><div data-cal></div></div>
       <section class="card"><div data-day></div></section>
     </div>`;
@@ -221,21 +227,20 @@ export async function jadwal(view, ctx) {
     const ds = slots.filter((s) => s.tanggal === d);
     const loose = bookings.filter((b) => b.tanggal === d && !ds.some((s) => s.id === b.slot_id));
     $('[data-day]', view).innerHTML = `
-      <div class="card-head"><div><h2>${esc(fmtTanggal(d))}</h2><p>${ds.length} slot</p></div>
+      <div class="card-head"><div><h2>${esc(fmtTanggal(d))}</h2><p>${ds.length ? `${ds.length} slot, ${ds.reduce((n, s) => n + Math.max(0, s.kapasitas - s.terpakai), 0)} tempat kosong` : 'Belum ada slot'}</p></div>
         <button class="btn sm ghost" data-add-day>${icon('plus')} Slot di tanggal ini</button></div>
       ${ds.length ? `<div class="slot-list">${ds.map((s) => {
         const bs = bookings.filter((b) => b.slot_id === s.id);
         const mine = s.guru_id === state.profile.id;
-        return `<div class="slot static" style="align-items:flex-start">
-          <span class="tm">${fmtJam(s.jam_mulai)}–${fmtJam(s.jam_selesai)}</span>
-          <div class="info stack" style="gap:6px">
-            <span>${esc(s.ruang || 'Ruang belum diisi')} · ${esc(s.guru_nama || '-')} · kapasitas ${s.kapasitas}${s.catatan ? ' · ' + esc(s.catatan) : ''}</span>
-            ${bs.length ? bs.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="row" style="gap:8px">${badge(b.status)} <b style="color:var(--ink)">${esc(b.murid?.nama)}</b> <span class="muted">${esc(b.murid?.kelas || '')}</span></a>`).join('') : '<span class="muted">Belum ada murid</span>'}
-          </div>
-          ${(mine || isAdmin()) ? `<button class="btn icon ghost" data-del="${s.id}" aria-label="Hapus slot" title="Hapus slot">${icon('trash')}</button>` : ''}
-        </div>`;
+        return slotCard(s, {
+          tag: 'div', cls: 'static',
+          aside: `${sisaBadge(s)}${(mine || isAdmin()) ? `<button class="btn icon sm ghost" data-del="${s.id}" aria-label="Hapus slot" title="Hapus slot">${icon('trash')}</button>` : ''}`,
+          extra: bs.length
+            ? bs.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${esc(b.murid?.kelas || '')}</span></a>`).join('')
+            : '<span class="muted small">Belum ada murid</span>',
+        });
       }).join('')}</div>` : emptyState('calendar', 'Belum ada slot', 'Tambahkan slot agar murid bisa memilih jadwal di tanggal ini.')}
-      ${loose.length ? `<h3 style="margin:18px 0 8px">Presentasi lain di tanggal ini</h3>${loose.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="row">${badge(b.status)} ${esc(b.murid?.nama)} · ${fmtJam(b.jam_mulai)}</a>`).join('')}` : ''}`;
+      ${loose.length ? `<h3 class="mt">Presentasi lain di tanggal ini</h3><div class="list">${loose.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${fmtJam(b.jam_mulai)}</span></a>`).join('')}</div>` : ''}`;
     $('[data-add-day]', view).addEventListener('click', () => formSlot(d));
     $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
       if (!(await confirmDialog('Hapus slot ini?', { ok: 'Hapus', danger: true }))) return;
@@ -252,7 +257,7 @@ export async function jadwal(view, ctx) {
     getDay: (d) => {
       const ds = slots.filter((s) => s.tanggal === d);
       const bk = bookings.filter((b) => b.tanggal === d);
-      return { has: true, dots: [...ds.map((s) => (s.terpakai >= s.kapasitas ? 'full' : 'ok')), ...bk.filter((b) => !b.slot_id).map(() => 'mine')] };
+      return { click: true, has: ds.length > 0 || bk.length > 0, dots: [...ds.map((s) => (s.terpakai >= s.kapasitas ? 'full' : 'ok')), ...bk.filter((b) => !b.slot_id).map(() => 'mine')] };
     },
     onMonth: async (m) => { month = m; await load(); },
     onPick: showDay,

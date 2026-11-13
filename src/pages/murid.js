@@ -1,7 +1,7 @@
 import { sb, state, loadProfile, isStaff, profilLengkap } from '../lib/supa.js';
 import {
   $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, fmtTanggal, fmtJam, fmtWaktu, today, badge,
-  ticket, emptyState, pwField, pwToggle,
+  ticket, emptyState, pwField, pwToggle, slotCard, sisaBadge,
 } from '../lib/ui.js';
 import { KOMPLEKSITAS, PORSI, INDIKATOR_A, fmtNilai } from '../lib/rubrik.js';
 import { JENIS, validasi, uploadFile, hapusFile, fileUrl, ukuran } from '../lib/files.js';
@@ -36,11 +36,11 @@ function formDataDiri(p) {
         <span class="hint" data-ket="porsi"></span></div>
     </div>
     <details class="small muted"><summary style="cursor:pointer;font-weight:600">Lihat ciri setiap tingkat</summary>
-      <dl class="kv" style="margin-top:10px">
+      <dl class="kv" style="margin-top:12px">
         ${Object.entries(KOMPLEKSITAS).map(([k, v]) => `<dt>Kompleksitas ${k.toLowerCase()}</dt><dd>${esc(v.ciri)}</dd>`).join('')}
         ${Object.entries(PORSI).map(([k, v]) => `<dt>Porsi ${k.toLowerCase()}</dt><dd>${esc(v.ciri)}</dd>`).join('')}
       </dl>
-      <p style="margin-top:10px">Pilih dengan jujur. Guru akan mencocokkan pilihanmu dengan surat keterangan DUDI dan jurnal PKL. Klaim yang tidak bisa kamu jelaskan saat tanya jawab akan diturunkan satu tingkat.</p>
+      <p style="margin-top:12px">Pilih dengan jujur. Guru akan mencocokkan pilihanmu dengan surat keterangan DUDI dan jurnal PKL. Klaim yang tidak bisa kamu jelaskan saat tanya jawab akan diturunkan satu tingkat.</p>
     </details>`;
 }
 
@@ -197,7 +197,7 @@ export async function pengajuan(view, ctx) {
   view.innerHTML = `
     <div class="page-head"><div><h1>Pengajuan presentasi</h1><p>${esc(p.nama)} · ${esc(p.kelas)} · ${esc(p.dudi)}</p></div>
       <a class="btn ghost" href="#/murid/poin">${icon('list')} Poin presentasi</a></div>
-    ${latest ? `<section class="cols" style="margin-bottom:26px">
+    ${latest ? `<section class="cols" style="margin-bottom:24px">
         <div class="stack">${ticket(latest, { extra })}</div>
         <aside class="card stack">
           <h3>Status</h3>${timeline(latest)}
@@ -207,7 +207,7 @@ export async function pengajuan(view, ctx) {
         </aside></section>` : ''}
     ${bisaAjukan ? `<section data-form-wrap><div class="card-head"><div><h2>${esc(head)}</h2><p>${esc(intro)}</p></div></div><div data-form></div></section>` : ''}
     ${selesai ? `<div class="callout ok">${icon('check')}<span>Presentasimu sudah selesai dinilai. Lihat nilai dan feedback di halaman <a href="#/murid/hasil">Hasil</a>.</span></div>` : ''}
-    ${list.length > 1 ? `<section style="margin-top:30px"><h2 style="margin-bottom:12px">Riwayat pengajuan</h2>
+    ${list.length > 1 ? `<section style="margin-top:32px"><h2 style="margin-bottom:12px">Riwayat pengajuan</h2>
       <div class="table-wrap"><table class="t"><thead><tr><th>Diajukan</th><th>Jadwal</th><th>Percobaan</th><th>Status</th><th>Feedback</th></tr></thead><tbody>
       ${list.slice(1).map((r) => `<tr><td>${esc(fmtWaktu(r.created_at))}</td><td>${esc(fmtTanggal(r.tanggal, false))}, ${esc(fmtJam(r.jam_mulai))}</td><td>${r.percobaan}</td><td>${badge(r.status)}</td><td class="small">${esc(r.feedback || '-')}</td></tr>`).join('')}
       </tbody></table></div></section>` : ''}`;
@@ -286,16 +286,16 @@ async function formPengajuan(root, ctx) {
   const slotRoot = $('[data-slots]', root);
   const showDay = (d) => {
     const ds = slots.filter((s) => s.tanggal === d);
-    slotRoot.innerHTML = ds.length ? ds.map((s) => {
-      const sisa = s.kapasitas - s.terpakai;
-      return `<button type="button" class="slot ${slotId === s.id ? 'on' : ''}" data-slot="${s.id}" ${sisa <= 0 ? 'disabled' : ''}>
-        <span class="tm">${fmtJam(s.jam_mulai)}–${fmtJam(s.jam_selesai)}</span>
-        <span class="info">${s.ruang ? esc(s.ruang) + '<br>' : ''}${esc(s.guru_nama || '')}${s.catatan ? ' · ' + esc(s.catatan) : ''}</span>
-        <span class="badge plain ${sisa > 0 ? 'selesai' : 'ditolak'}">${sisa > 0 ? `${sisa} kosong` : 'Penuh'}</span></button>`;
-    }).join('') : '<p class="small muted">Tidak ada slot di tanggal ini.</p>';
+    slotRoot.innerHTML = ds.length
+      ? ds.map((s) => slotCard(s, {
+          cls: slotId === s.id ? 'on' : '',
+          attrs: `data-slot="${s.id}" ${s.terpakai >= s.kapasitas ? 'disabled' : ''} aria-pressed="${slotId === s.id}"`,
+          aside: sisaBadge(s),
+        })).join('')
+      : '<p class="small muted">Tidak ada slot di tanggal ini.</p>';
     $$('[data-slot]', slotRoot).forEach((b) => b.addEventListener('click', () => {
       slotId = Number(b.dataset.slot);
-      $$('[data-slot]', slotRoot).forEach((x) => x.classList.toggle('on', x === b));
+      $$('[data-slot]', slotRoot).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
     }));
   };
   const cal = calendar($('[data-cal]', root), {
@@ -390,13 +390,13 @@ function kartuHasil(r) {
   const avg = (k) => (pen.length ? pen.reduce((s, x) => s + (Number(x[k]) || 0), 0) / pen.length : null);
   const blok = (label, val) => (val ? `<div class="stack" style="gap:4px"><span class="label">${label}</span><p style="white-space:pre-wrap">${esc(val)}</p></div>` : '');
   return `<article class="card stack-lg">
-    <div class="row between"><div><h2>${esc(r.judul)}</h2><p class="muted small" style="margin-top:4px">Presentasi ${esc(fmtTanggal(r.tanggal))} · percobaan ke-${r.percobaan}</p></div>${badge(r.status)}</div>
+    <div class="card-title-row"><div><h2>${esc(r.judul)}</h2><p class="muted small mt-xs">Presentasi ${esc(fmtTanggal(r.tanggal))}, percobaan ke-${r.percobaan}</p></div>${badge(r.status)}</div>
     ${h.remidi ? `<div class="callout bad">${icon('alert')}<div><b>Kamu perlu remidi.</b> ${esc(h.info_remidi || '')}<div style="margin-top:8px"><a class="btn sm danger" href="#/murid/pengajuan">${icon('calendar')} Jadwalkan ulang</a></div></div></div>` : ''}
-    <div class="cols" style="grid-template-columns:minmax(0,1fr) 300px">
+    <div class="cols result">
       <div class="stack">
-        <h3>Komponen A · kualitas presentasi dan pemahaman</h3>
+        <h3>Komponen A: kualitas presentasi dan pemahaman</h3>
         <div>${INDIKATOR_A.map((i) => `<div class="sum-row"><span>${esc(i.judul)}</span><b>${fmtNilai(avg(i.key))} / ${i.bobot}</b></div>`).join('')}</div>
-        <h3 style="margin-top:8px">Komponen B · tingkat tantangan pekerjaan</h3>
+        <h3 class="mt">Komponen B: tingkat tantangan pekerjaan</h3>
         <div>
           <div class="sum-row"><span>Kompleksitas pekerjaan (${esc(h.kompleksitas)})</span><b>${fmtNilai(h.b1)} / 15</b></div>
           <div class="sum-row"><span>Porsi kontribusi (${esc(h.porsi)})</span><b>${fmtNilai(h.b2)} / 10</b></div>
@@ -404,7 +404,7 @@ function kartuHasil(r) {
         </div>
         ${pen.length > 1 ? `<p class="small muted">Komponen A adalah rata-rata dari ${pen.length} penguji.</p>` : ''}
       </div>
-      <div class="card flat total-box" style="background:var(--surface-2);border:0">
+      <div class="total-box tinted">
         <span class="label">Nilai akhir</span>
         <div class="total-big">${fmtNilai(h.total)}</div>
         <div class="meter" aria-hidden="true"><i class="a" style="width:${h.nilai_a}%"></i><i class="b" style="width:${h.nilai_b}%"></i></div>

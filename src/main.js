@@ -1,6 +1,6 @@
 import './style.css';
 import { sb, state, configured, loadProfile, loadSettings, isStaff, isAdmin, profilLengkap } from './lib/supa.js';
-import { $, esc, icon, initials, relatif, toast } from './lib/ui.js';
+import { $, esc, icon, initials, relatif, toast, labelTables } from './lib/ui.js';
 import { NAMA_SEKOLAH } from './config.js';
 import { renderAuth } from './pages/auth.js';
 import * as M from './pages/murid.js';
@@ -82,11 +82,23 @@ function renderShell() {
       </header>
       <main class="view" id="view" tabindex="-1"></main>
     </div>
-    <nav class="bottom-nav" aria-label="Menu">${NAV[role].map(([h, ic, label]) => `<a href="${h}" data-nav="${h}">${icon(ic)}<span>${label}</span></a>`).join('')}</nav>
+    <nav class="bottom-nav" aria-label="Menu">${(role === 'guru' ? NAV.guru.slice(0, 4) : NAV.murid).map(([h, ic, label]) => `<a href="${h}" data-nav="${h}">${icon(ic)}<span>${label.replace(' & slot', '')}</span></a>`).join('')}
+      ${role === 'guru' ? `<button type="button" data-more>${icon('list')}<span>Lainnya</span></button>` : ''}</nav>
+    <div class="sheet hidden" data-sheet><div class="sheet-panel" role="dialog" aria-label="Menu lainnya">
+      <div class="sheet-handle"></div>
+      ${NAV.guru.slice(4).map(([h, ic, label]) => `<a href="${h}" data-nav="${h}">${icon(ic)}<span>${label}</span></a>`).join('')}
+      <a href="#/guru/profil" data-nav="#/guru/profil">${icon('user')}<span>Profil saya</span></a>
+      <button type="button" data-logout>${icon('logout')}<span>Keluar</span></button>
+    </div></div>
   </div>`;
   app.dataset.shell = role;
   app.querySelectorAll('[data-logout]').forEach((b) => b.addEventListener('click', async () => { await sb.auth.signOut(); }));
-  if (matchMedia('(max-width: 860px)').matches) app.querySelector('.mobile-only').style.display = '';
+  if (matchMedia('(max-width: 860px)').matches && role === 'murid') app.querySelector('.mobile-only').style.display = '';
+  const sheet = app.querySelector('[data-sheet]');
+  app.querySelector('[data-more]')?.addEventListener('click', () => sheet.classList.remove('hidden'));
+  sheet.addEventListener('click', (e) => { if (e.target === sheet || e.target.closest('a,button')) sheet.classList.add('hidden'); });
+  // tabel otomatis berubah menjadi kartu di layar kecil
+  new MutationObserver(() => labelTables(document.getElementById('view'))).observe(document.getElementById('view'), { childList: true, subtree: true });
   $('[data-theme-toggle]', app).addEventListener('click', (e) => {
     const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = t;
@@ -97,6 +109,8 @@ function renderShell() {
 }
 
 function setActive(hash) {
+  const more = app.querySelector('[data-more]');
+  if (more) more.classList.toggle('on', NAV.guru.slice(4).some(([h]) => hash.startsWith(h)) || hash === '#/guru/profil');
   app.querySelectorAll('[data-nav]').forEach((a) => {
     const h = a.dataset.nav;
     const on = hash === h || (h !== '#/guru' && hash.startsWith(h + '/')) || (h === '#/guru/penilaian' && hash.startsWith('#/guru/nilai/'));

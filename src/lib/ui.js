@@ -160,6 +160,49 @@ export function ticket(p, { extra = '' } = {}) {
   </article>`;
 }
 
+// ---- Komponen slot jadwal (satu bentuk untuk semua halaman) ----
+export function sisaBadge(s) {
+  const sisa = s.kapasitas - s.terpakai;
+  return sisa > 0
+    ? `<span class="badge plain selesai">Sisa ${sisa} dari ${s.kapasitas}</span>`
+    : '<span class="badge plain ditolak">Penuh</span>';
+}
+export function slotCard(s, { tag = 'button', cls = '', attrs = '', aside = '', extra = '', showDate = false } = {}) {
+  const meta = [
+    showDate && `<span>${icon('calendar')}${esc(fmtTanggal(s.tanggal, false))}</span>`,
+    `<span>${icon('pin')}${esc(s.ruang || 'Ruang belum diisi')}</span>`,
+    s.guru_nama && `<span>${icon('user')}${esc(s.guru_nama)}</span>`,
+    s.catatan && `<span>${icon('info')}${esc(s.catatan)}</span>`,
+  ].filter(Boolean).join('');
+  return `<${tag} class="slot ${cls}" ${tag === 'button' ? 'type="button"' : ''} ${attrs}>
+    <span class="slot-time">${fmtJam(s.jam_mulai)}<span class="slot-sep">–</span>${fmtJam(s.jam_selesai)}</span>
+    <span class="slot-aside">${aside}</span>
+    <span class="slot-meta">${meta}</span>
+    ${extra ? `<span class="slot-extra">${extra}</span>` : ''}
+  </${tag}>`;
+}
+
+// ---- Baris daftar (avatar + isi + keterangan) ----
+export function listItem({ href, lead, title, sub, aside = '' }) {
+  return `<a class="list-item" href="${href}">
+    <span class="li-lead">${lead}</span>
+    <span class="li-main"><b>${title}</b><span>${sub}</span></span>
+    ${aside ? `<span class="li-aside">${aside}</span>` : ''}
+    ${icon('chevr', 'li-chev')}</a>`;
+}
+
+// ---- Tabel: beri label kolom agar bisa tampil sebagai kartu di HP ----
+export function labelTables(root) {
+  root.querySelectorAll('table.t').forEach((t) => {
+    const heads = [...t.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    if (!heads.length) return;
+    t.classList.add('responsive');
+    t.querySelectorAll('tbody tr').forEach((tr) => [...tr.children].forEach((td, i) => {
+      if (heads[i]) td.dataset.label = heads[i]; else td.classList.add('no-label');
+    }));
+  });
+}
+
 export function pwToggle(root) {
   $$('.toggle-pw', root).forEach((b) =>
     b.addEventListener('click', () => {

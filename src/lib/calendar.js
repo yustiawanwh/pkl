@@ -14,8 +14,9 @@ export function calendar(root, { month = new Date(), getDay, onPick, onMonth, se
       const d = new Date(start); d.setDate(start.getDate() + i);
       const iso = isoDate(d);
       const info = getDay?.(iso) || {};
-      const cls = ['cal-day', d.getMonth() === cur.getMonth() ? 'in' : '', info.has ? 'has' : '', iso === t ? 'today' : '', iso === sel ? 'sel' : ''].join(' ');
-      cells += `<button type="button" class="${cls}" data-d="${iso}" ${info.has ? '' : 'tabindex="-1"'} aria-label="${iso}">
+      const click = info.has || info.click;
+      const cls = ['cal-day', d.getMonth() === cur.getMonth() ? 'in' : '', info.has ? 'has' : '', click ? 'click' : '', iso === t ? 'today' : '', iso === sel ? 'sel' : ''].join(' ');
+      cells += `<button type="button" class="${cls}" data-d="${iso}" ${click ? '' : 'tabindex="-1"'} aria-label="${iso}">
         ${d.getDate()}<span class="dots">${(info.dots || []).slice(0, 4).map((c) => `<i class="${c}"></i>`).join('')}</span></button>`;
     }
     root.innerHTML = `<div class="cal">
@@ -31,7 +32,7 @@ export function calendar(root, { month = new Date(), getDay, onPick, onMonth, se
       await onMonth?.(cur);
       draw();
     }));
-    root.querySelectorAll('.cal-day.has').forEach((b) => b.addEventListener('click', () => { sel = b.dataset.d; draw(); onPick?.(sel); }));
+    root.querySelectorAll('.cal-day.click').forEach((b) => b.addEventListener('click', () => { sel = b.dataset.d; draw(); onPick?.(sel); }));
   };
   draw();
   return { redraw: draw, get month() { return cur; }, select(d) { sel = d; draw(); } };
