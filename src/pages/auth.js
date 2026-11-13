@@ -39,7 +39,7 @@ export function renderAuth(app, { onLogin }) {
           <div><h2>Daftar akun murid</h2><p class="muted" style="margin-top:6px">Tanggal lahir dipakai guru untuk memverifikasi saat kamu lupa password.</p></div>
           <div class="field"><label for="f-nama">Nama lengkap</label><input class="input" id="f-nama" name="nama" autocomplete="name" required /></div>
           <div class="grid-2">
-            <div class="field"><label for="f-nis">NIS</label><input class="input" id="f-nis" name="nis" inputmode="numeric" pattern="[0-9A-Za-z.\\-]{3,20}" required /></div>
+            <div class="field"><label for="f-nis">NIS</label><input class="input" id="f-nis" name="nis" placeholder="Contoh: 9999.9999/999.99" required /></div>
             <div class="field"><label for="f-kelas">Kelas</label>
               ${kelasList.length
                 ? `<select class="select" id="f-kelas" name="kelas" required><option value="">Pilih kelas</option>${kelasList.map((k) => `<option>${esc(k)}</option>`).join('')}</select>`
@@ -86,7 +86,8 @@ export function renderAuth(app, { onLogin }) {
     const fd = Object.fromEntries(new FormData(fDaftar));
     const nis = (fd.nis || '').trim();
     if (!fd.nama.trim() || !nis || !fd.kelas || !fd.tgl_lahir) return toast('Lengkapi semua isian.', 'err');
-    if (!/^[0-9A-Za-z.\-]{3,20}$/.test(nis)) return toast('NIS hanya boleh huruf/angka, 3–20 karakter.', 'err');
+    if (!/^[0-9A-Za-z](?:[0-9A-Za-z]|[.\/\-](?=[0-9A-Za-z])){2,29}$/.test(nis))
+      return toast('NIS 3–30 karakter: huruf, angka, titik, garis miring (/), atau minus. Tidak boleh diawali/diakhiri tanda baca.', 'err');
     if (fd.password.length < 6) return toast('Password minimal 6 karakter.', 'err');
     if (fd.password !== fd.password2) return toast('Ulangi password belum sama.', 'err');
     withBusy(fDaftar.querySelector('[type=submit]'), async () => {

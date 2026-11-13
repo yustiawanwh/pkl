@@ -10,7 +10,9 @@ export const sb = createClient(SUPABASE_URL || 'https://belum-diatur.supabase.co
 // Bila yang diketik sudah berupa alamat email lengkap (mis. Gmail admin), dipakai apa adanya.
 export const toEmail = (id) => {
   const v = String(id).trim().toLowerCase().replace(/\s+/g, '');
-  return v.includes('@') ? v : `${v}@${EMAIL_DOMAIN}`;
+  if (v.includes('@')) return v;
+  // "/" tidak lazim di alamat email, jadi diganti "_" (karakter "_" tidak dipakai di NIS)
+  return `${v.replace(/\//g, '_')}@${EMAIL_DOMAIN}`;
 };
 
 export const state = { session: null, profile: null, settings: {} };
