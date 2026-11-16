@@ -6,6 +6,7 @@ import {
 import { KOMPLEKSITAS, PORSI } from '../lib/rubrik.js';
 import { calendar, monthRange } from '../lib/calendar.js';
 import { daftarBerkas } from './murid.js';
+import { bukaBerkasMurid } from './berkas.js';
 
 const SEL = '*, murid:profiles!pengajuan_murid_id_fkey(id, nama, nis, kelas, dudi, judul, kompleksitas, porsi), hasil(dipublikasi, total, predikat, remidi)';
 const who = (m) => `<div class="who"><b>${esc(m?.nama)}</b><span>${esc(m?.kelas || '')}${m?.nis ? ' · NIS ' + esc(m.nis) : ''}</span></div>`;
@@ -394,12 +395,14 @@ export async function daftarMurid(view, ctx) {
         <td class="small">${r.kompleksitas ? `${esc(r.kompleksitas)} / ${esc(r.porsi)}` : '<span class="muted">Belum lengkap</span>'}</td>
         <td>${last[r.id] ? badge(last[r.id]) : '<span class="muted small">Belum mengajukan</span>'}</td>
         <td class="num"><div class="row" style="justify-content:flex-end;gap:6px">
+          <button class="btn sm ghost" data-berkas="${r.id}" ${last[r.id] ? '' : 'disabled title="Belum ada pengajuan"'}>${icon('file')} Berkas</button>
           <button class="btn sm ghost" data-edit="${r.id}">${icon('edit')} Ubah</button>
           <button class="btn sm ghost" data-reset="${r.id}">${icon('key')} Reset password</button>
           ${isAdmin() ? `<button class="btn sm ghost" data-hapus="${r.id}" aria-label="Hapus akun">${icon('trash')}</button>` : ''}
         </div></td></tr>`).join('')}
       </tbody></table></div>` : `<div class="card">${emptyState('users', 'Tidak ada murid', 'Murid mendaftar sendiri dari halaman awal.')}</div>`;
     $$('[data-reset]', view).forEach((b) => b.addEventListener('click', () => resetPw(all.find((x) => x.id === b.dataset.reset))));
+    $$('[data-berkas]', view).forEach((b) => b.addEventListener('click', () => bukaBerkasMurid(all.find((x) => x.id === b.dataset.berkas))));
     $$('[data-edit]', view).forEach((b) => b.addEventListener('click', () => editMurid(all.find((x) => x.id === b.dataset.edit))));
     $$('[data-hapus]', view).forEach((b) => b.addEventListener('click', async () => {
       const m = all.find((x) => x.id === b.dataset.hapus);

@@ -795,3 +795,18 @@ td.nowrap, .nowrap { white-space: nowrap; }
 @media (max-width: 860px) {
   .auth-main { padding-top: 28px; }
 }
+
+/* Berkas murid */
+.file-chip {
+  display: inline-flex; align-items: center; gap: var(--s2); min-height: 36px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink);
+  font-size: 13px; white-space: nowrap; text-decoration: none;
+}
+.file-chip:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
+.file-chip svg.i { width: 16px; height: 16px; color: var(--primary); }
+.file-chip svg.i:last-of-type { color: var(--ink-3); }
+.file-chip b { font-weight: 700; }
+hr.sep { border: 0; border-top: 1px dashed var(--line); margin: 0; }
+@media (max-width: 860px) {
+  table.responsive td > .badge, table.responsive td > .file-chip { justify-self: start; }
+}

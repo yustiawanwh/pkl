@@ -8,6 +8,7 @@ import * as G from './pages/guru.js';
 import * as N from './pages/nilai.js';
 import * as S from './pages/pengaturan.js';
 import * as R from './pages/riwayat.js';
+import * as B from './pages/berkas.js';
 
 const app = document.getElementById('app');
 
@@ -24,6 +25,7 @@ const NAV = {
     ['#/guru/jadwal', 'calendar', 'Jadwal & slot'],
     ['#/guru/penilaian', 'clipboard', 'Penilaian'],
     ['#/guru/murid', 'users', 'Murid'],
+    ['#/guru/berkas', 'file', 'Berkas murid'],
     ['#/guru/rekap', 'chart', 'Rekap nilai'],
     ['#/guru/riwayat', 'clock', 'Riwayat & progres'],
     ['#/guru/poin', 'list', 'Poin presentasi'],
@@ -44,6 +46,7 @@ const ROUTES = [
   [/^#\/guru\/penilaian$/, 'staff', N.daftarPenilaian],
   [/^#\/guru\/nilai\/(\d+)$/, 'staff', N.formNilai],
   [/^#\/guru\/murid$/, 'staff', G.daftarMurid],
+  [/^#\/guru\/berkas$/, 'staff', B.halamanBerkas],
   [/^#\/guru\/rekap$/, 'staff', N.rekap],
   [/^#\/guru\/riwayat$/, 'staff', R.riwayat],
   [/^#\/guru\/poin$/, 'staff', M.poin],
