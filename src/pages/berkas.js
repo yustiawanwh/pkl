@@ -92,7 +92,7 @@ export async function halamanBerkas(view) {
   };
 
   const chip = (file, label, ic) => (file?.path
-    ? `<a class="file-chip" href="${esc(fileUrl(file))}" target="_blank" rel="noopener" title="${esc(file.name)}">
+    ? `<a class="file-chip" href="${esc(fileUrl(file))}" data-unduh="${esc(file.name)}" target="_blank" rel="noopener" title="${esc(file.name)}">
         ${icon(ic)}<span><b>${esc(ext(file))}</b> ${ukuran(file.size || 0)}</span>${icon('download')}<span class="sr">Unduh ${esc(label)}</span></a>`
     : '<span class="muted small">Belum ada</span>');
 

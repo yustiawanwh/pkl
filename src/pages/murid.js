@@ -155,7 +155,7 @@ export async function profil(view, ctx) {
 // Pengajuan jadwal
 // =====================================================================
 const fileLink = (f, label, ic = 'file') => f?.path
-  ? `<a class="file-link" href="${esc(fileUrl(f))}" target="_blank" rel="noopener"><span class="ic">${icon(ic)}</span><div><b>${esc(label)}</b><span>${esc(f.name)} · ${ukuran(f.size || 0)}</span></div>${icon('download')}</a>`
+  ? `<a class="file-link" href="${esc(fileUrl(f))}" data-unduh="${esc(f.name)}" target="_blank" rel="noopener"><span class="ic">${icon(ic)}</span><div><b>${esc(label)}</b><span>${esc(f.name)} · ${ukuran(f.size || 0)}</span></div>${icon('download')}</a>`
   : '';
 export const daftarBerkas = (p) => `<div class="stack" style="gap:8px">
   ${fileLink(p.file_laporan, 'Draft laporan', 'file')}${fileLink(p.file_ppt, 'File presentasi', 'slides')}${fileLink(p.file_bimbingan, 'Lembar bimbingan', 'book')}</div>`;

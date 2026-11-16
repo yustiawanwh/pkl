@@ -43,3 +43,25 @@ export async function hapusFile(f) {
 }
 
 export const ukuran = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
+// Unduh tanpa cookie (credentials: 'omit').
+// Membuka tautan langsung dari situs lain membuat browser mengirim sebagian cookie
+// Nextcloud yang tersimpan, lalu Nextcloud menolak dengan "Strict Cookie has not been
+// found in request". Lewat fetch tanpa cookie, masalah itu tidak terjadi, dan berkas
+// tersimpan dengan nama aslinya.
+export async function unduhFile(url, nama) {
+  const res = await fetch(url, { credentials: 'omit', cache: 'no-store' });
+  if (!res.ok) {
+    let msg = `kode ${res.status}`;
+    try { const j = await res.clone().json(); if (j?.error) msg = j.error; } catch {}
+    throw new Error(`Berkas gagal diunduh (${msg})`);
+  }
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nama || url.split('/').pop();
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}

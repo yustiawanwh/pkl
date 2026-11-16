@@ -2,6 +2,7 @@ import './style.css';
 import { sb, state, configured, loadProfile, loadSettings, isStaff, isAdmin, profilLengkap } from './lib/supa.js';
 import { $, esc, icon, initials, relatif, toast, labelTables } from './lib/ui.js';
 import { NAMA_SEKOLAH } from './config.js';
+import { unduhFile } from './lib/files.js';
 import { renderAuth } from './pages/auth.js';
 import * as M from './pages/murid.js';
 import * as G from './pages/guru.js';
@@ -235,4 +236,18 @@ sb.auth.onAuthStateChange((event, session) => {
 });
 
 window.addEventListener('hashchange', route);
+
+// Semua tautan berkas diunduh lewat fetch tanpa cookie (lihat lib/files.js)
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('a[data-unduh]');
+  if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  if (a.dataset.busy) return;
+  a.dataset.busy = '1';
+  a.classList.add('loading');
+  toast(`Mengunduh ${a.dataset.unduh}…`);
+  try { await unduhFile(a.href, a.dataset.unduh); }
+  catch (err) { toast(err.message, 'err'); }
+  finally { delete a.dataset.busy; a.classList.remove('loading'); }
+});
 boot();

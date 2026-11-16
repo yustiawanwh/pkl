@@ -810,3 +810,4 @@ hr.sep { border: 0; border-top: 1px dashed var(--line); margin: 0; }
 @media (max-width: 860px) {
   table.responsive td > .badge, table.responsive td > .file-chip { justify-self: start; }
 }
+a.loading { opacity: .6; pointer-events: none; cursor: progress; }
