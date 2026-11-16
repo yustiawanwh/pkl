@@ -6,6 +6,7 @@ export async function pengaturan(view, ctx) {
   let kelas = [...(state.settings.daftar_kelas || [])];
   let poin = structuredClone(state.settings.poin_presentasi || []);
   const pg = state.settings.pengumuman || { aktif: false, isi: '' };
+  const kp = state.settings.ttd_kaprog || { tampil: false, nama: '' };
 
   view.innerHTML = `
     <div class="page-head"><div><h1>Pengaturan</h1><p>Atur cara penilaian, daftar kelas, poin presentasi, dan akun guru.</p></div></div>
@@ -15,6 +16,14 @@ export async function pengaturan(view, ctx) {
           <label class="switch on-primary"><input type="checkbox" name="pg_aktif" ${pg.aktif ? 'checked' : ''} /> Tampilkan</label></div>
         <textarea class="textarea" name="pg_isi" maxlength="500" placeholder="Mis. Batas pengajuan jadwal presentasi: Jumat, 20 November 2026.">${esc(pg.isi || '')}</textarea>
         <div class="row between"><span class="hint" data-pg-count></span><button class="btn primary" data-save-pg>${icon('check')} Simpan pengumuman</button></div>
+      </section>
+
+      <section class="card stack" data-kp>
+        <div class="card-title-row"><div><h2>Tanda tangan laporan cetak</h2><p class="muted small mt-xs">Laporan selalu memuat tanda tangan Guru Penguji (nama guru yang mencetak). Kolom Kepala Program Keahlian bersifat opsional.</p></div>
+          <label class="switch on-primary"><input type="checkbox" name="kp_tampil" ${kp.tampil ? 'checked' : ''} /> Tampilkan Kepala Program</label></div>
+        <div class="field ${kp.tampil ? '' : 'hidden'}" data-kp-nama><label for="f-kp">Nama Kepala Program Keahlian</label>
+          <input class="input" id="f-kp" name="kp_nama" value="${esc(kp.nama || '')}" placeholder="Kosongkan bila ingin ditulis tangan" /></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn primary" data-save-kp>${icon('check')} Simpan</button></div>
       </section>
 
       <section class="card stack">
@@ -57,6 +66,15 @@ export async function pengaturan(view, ctx) {
     const aktif = pgEl.querySelector('[name=pg_aktif]').checked;
     if (aktif && !isi) return toast('Tulis isi pengumuman, atau matikan "Tampilkan".', 'err');
     try { await saveSetting('pengumuman', { aktif, isi }); toast(aktif ? 'Pengumuman tampil di halaman awal.' : 'Pengumuman disimpan dan disembunyikan.'); }
+    catch (err) { toast(errMsg(err), 'err'); }
+  }));
+
+  // ---- tanda tangan laporan
+  const kpEl = $('[data-kp]', view);
+  kpEl.querySelector('[name=kp_tampil]').addEventListener('change', (e) => $('[data-kp-nama]', kpEl).classList.toggle('hidden', !e.target.checked));
+  $('[data-save-kp]', kpEl).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
+    const val = { tampil: kpEl.querySelector('[name=kp_tampil]').checked, nama: kpEl.querySelector('[name=kp_nama]').value.trim() };
+    try { await saveSetting('ttd_kaprog', val); toast(val.tampil ? 'Kolom Kepala Program ditampilkan di laporan.' : 'Kolom Kepala Program disembunyikan.'); }
     catch (err) { toast(errMsg(err), 'err'); }
   }));
 

@@ -203,12 +203,17 @@ const kop = (judul, sub) => `
   <h1 class="rp-title">${esc(judul)}</h1>
   <p class="rp-sub">${sub}</p>`;
 
-const ttd = () => `
-  <section class="rp-ttd">
-    <div><p>Mengetahui,<br>Kepala Program Keahlian</p><div class="rp-sign"></div><p class="rp-line">NIP.</p></div>
-    <div><p>${esc(NAMA_SEKOLAH.replace(/^SMK\s*/i, '').split(' ').slice(-1)[0] || '')}, ${esc(fmtTanggal(today(), false))}<br>Guru Pembimbing / Penguji</p>
-      <div class="rp-sign"></div><p class="rp-line">${esc(state.profile.nama)}</p></div>
+// Tanda tangan: nama di atas garis. Kolom Kepala Program hanya bila diaktifkan di Pengaturan.
+const ttd = () => {
+  const kp = state.settings.ttd_kaprog || {};
+  const kota = NAMA_SEKOLAH.replace(/^SMK\s*/i, '').split(' ').slice(-1)[0] || '';
+  const blok = (atas, nama) => `<div class="rp-ttd-blok"><p>${atas}</p><div class="rp-sign"></div>
+    <p class="rp-name">${nama ? esc(nama) : '&nbsp;'}</p></div>`;
+  return `<section class="rp-ttd ${kp.tampil ? '' : 'single'}">
+    ${kp.tampil ? blok('Mengetahui,<br>Kepala Program Keahlian', kp.nama) : ''}
+    ${blok(`${esc(kota)}, ${esc(fmtTanggal(today(), false))}<br>Guru Penguji`, state.profile.nama)}
   </section>`;
+};
 
 const tglFile = () => today();
 

@@ -718,8 +718,9 @@ dl.kv dd { margin: 0; font-weight: 500; }
   .rp-final b { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 20pt; color: #2F5BEA; }
   .rp-note { font-size: 8pt; color: #555; margin-top: 8px; }
   .rp-ttd { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 22px; break-inside: avoid; text-align: center; }
+  .rp-ttd.single .rp-ttd-blok { grid-column: 2; }
   .rp-sign { height: 58px; }
-  .rp-line { border-top: 0.8pt solid #333; padding-top: 3px; margin: 0 30px; font-weight: 600; }
+  .rp-name { display: inline-block; min-width: 62%; padding: 0 10px 2px; border-bottom: 0.8pt solid #333; font-weight: 700; }
 }
 td.nowrap, .nowrap { white-space: nowrap; }
 .hist-item > .stack-sm { min-width: 0; }
