@@ -162,6 +162,13 @@ export async function detailPengajuan(view, ctx) {
             </div>` : '<p class="small muted">Pengajuan ini sudah dinilai. Ubah hasil dari halaman penilaian.</p>'}
           ${r.status === 'disetujui' ? `<button type="button" class="btn ghost" data-act="feedback">Simpan feedback saja</button>` : ''}
         </form>
+        ${r.status === 'remidi' ? (() => {
+          const lebihBaru = (riwayat || []).find((x) => x.created_at > r.created_at && x.status !== 'dibatalkan');
+          return `<div class="card stack"><h3>Jadwal remidi</h3>${lebihBaru
+            ? `<p class="small muted">Remidi sudah dijadwalkan.</p><a class="btn ghost" href="#/guru/pengajuan/${lebihBaru.id}">${icon('calendar')} Lihat jadwal remidi</a>`
+            : `<p class="small muted">Pilih slot kosong untuk presentasi ulang. Jadwal langsung disetujui dan murid mendapat notifikasi. Berkas sebelumnya dipakai, dan murid bisa menggantinya.</p>
+               <button class="btn primary" data-remidi>${icon('calendar')} Jadwalkan remidi</button>`}</div>`;
+        })() : ''}
         ${['menunggu', 'disetujui'].includes(r.status) ? `<div class="card stack"><h3>Pindah jadwal</h3><p class="small muted">Pindahkan murid ke slot lain bila jadwal berubah.</p><button class="btn ghost" data-pindah>${icon('calendar')} Pilih slot lain</button></div>` : ''}
       </aside>
     </div>`;
@@ -181,6 +188,8 @@ export async function detailPengajuan(view, ctx) {
     });
   }));
 
+  $('[data-remidi]', view)?.addEventListener('click', () => jadwalkanRemidi(r, ctx));
+
   $('[data-pindah]', view)?.addEventListener('click', async () => {
     const t = today();
     const { data: sl } = await sb.rpc('daftar_slot', { p_dari: t, p_sampai: isoDate(new Date(Date.now() + 120 * 864e5)) });
@@ -196,6 +205,42 @@ export async function detailPengajuan(view, ctx) {
       md.close(); toast('Jadwal dipindah.'); ctx.go(`#/guru/pengajuan/${id}`);
     }));
   });
+}
+
+// Guru memilih slot kosong untuk murid remidi
+export async function jadwalkanRemidi(r, ctx) {
+  const t = today();
+  const { data: sl, error } = await sb.rpc('daftar_slot', { p_dari: t, p_sampai: isoDate(new Date(Date.now() + 120 * 864e5)) });
+  if (error) return toast(errMsg(error), 'err');
+  const free = (sl || []).filter((s) => s.terpakai < s.kapasitas);
+  let pilih = null;
+  const nama = r.murid?.nama || 'murid';
+  const md = modal({
+    title: `Jadwalkan remidi ${nama}`,
+    wide: true,
+    body: free.length ? `<div class="stack">
+        <p class="small muted">Pilih slot kosong. Jadwal langsung disetujui dan ${esc(nama)} mendapat notifikasi.</p>
+        <div class="slot-list" data-list>${free.map((s) => slotCard(s, { attrs: `data-s="${s.id}" aria-pressed="false"`, aside: sisaBadge(s), showDate: true })).join('')}</div>
+        <div class="field"><label for="f-rc">Catatan untuk murid <span class="muted">(opsional)</span></label>
+          <textarea class="textarea" id="f-rc" rows="2" placeholder="Mis. perbaiki demo dan bawa video cadangan.">${esc(r.hasil?.info_remidi || '')}</textarea></div>
+      </div>`
+      : emptyState('calendar', 'Tidak ada slot kosong', 'Buka slot baru di menu Jadwal & slot, lalu coba lagi.', '<a class="btn ghost" href="#/guru/jadwal" data-close>Buka Jadwal & slot</a>'),
+    footer: free.length ? '<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-ok disabled>Jadwalkan remidi</button>' : '',
+  });
+  const ok = $('[data-ok]', md.el);
+  $$('[data-s]', md.el).forEach((b) => b.addEventListener('click', () => {
+    pilih = Number(b.dataset.s);
+    $$('[data-s]', md.el).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    ok.disabled = false;
+  }));
+  ok?.addEventListener('click', () => withBusy(ok, async () => {
+    if (!pilih) return;
+    const { data: baru, error: e } = await sb.rpc('jadwalkan_remidi', { p_pengajuan_id: r.id, p_slot_id: pilih, p_catatan: $('#f-rc', md.el).value });
+    if (e) return toast(errMsg(e), 'err');
+    md.close(); toast(`Remidi ${nama} dijadwalkan.`);
+    ctx.refreshNotif?.();
+    ctx.go(`#/guru/pengajuan/${baru}`);
+  }));
 }
 
 export function notFound(view, back = '#/guru/pengajuan', label = 'Kembali ke daftar pengajuan') {

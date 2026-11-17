@@ -2,6 +2,7 @@ import { sb, state, loadProfile, isStaff, profilLengkap } from '../lib/supa.js';
 import {
   $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, fmtTanggal, fmtJam, fmtWaktu, today, badge,
   ticket, emptyState, pwField, pwToggle, slotCard, sisaBadge,
+  modal,
 } from '../lib/ui.js';
 import { KOMPLEKSITAS, PORSI, INDIKATOR_A, fmtNilai } from '../lib/rubrik.js';
 import { JENIS, validasi, uploadFile, hapusFile, fileUrl, ukuran } from '../lib/files.js';
@@ -183,6 +184,8 @@ export async function pengajuan(view, ctx) {
   const active = latest && ['menunggu', 'disetujui'].includes(latest.status);
   const selesai = latest?.status === 'selesai';
   const bisaAjukan = !active && !selesai;
+  // presentasi remidi yang belum lewat: murid boleh mengganti berkas
+  const bisaGanti = active && latest.percobaan > 1 && latest.tanggal >= today();
 
   let head = 'Ajukan jadwal presentasi';
   let intro = 'Unggah berkas, pilih slot yang tersedia, lalu kirim. Guru akan memverifikasi pengajuanmu.';
@@ -192,7 +195,8 @@ export async function pengajuan(view, ctx) {
   const extra = latest ? `
     ${latest.feedback ? `<div class="callout ${latest.status === 'ditolak' ? 'bad' : 'info'}">${icon('info')}<span><b>Feedback guru:</b> ${esc(latest.feedback)}</span></div>` : ''}
     ${latest.status === 'remidi' && latest.hasil?.info_remidi ? `<div class="callout bad">${icon('alert')}<span><b>Informasi remidi:</b> ${esc(latest.hasil.info_remidi)}</span></div>` : ''}
-    ${latest.status === 'menunggu' ? '<div class="callout warn">' + icon('clock') + '<span>Menunggu verifikasi dan persetujuan guru.</span></div>' : ''}` : '';
+    ${latest.status === 'menunggu' ? '<div class="callout warn">' + icon('clock') + '<span>Menunggu verifikasi dan persetujuan guru.</span></div>' : ''}
+    ${bisaGanti ? `<div class="callout info">${icon('info')}<span>Ini jadwal presentasi remidi. Kamu bisa <b>mengganti berkas</b> dengan versi yang sudah diperbaiki sampai hari presentasi.</span></div>` : ''}` : '';
 
   view.innerHTML = `
     <div class="page-head"><div><h1>Pengajuan presentasi</h1><p>${esc(p.nama)} · ${esc(p.kelas)} · ${esc(p.dudi)}</p></div>
@@ -202,6 +206,7 @@ export async function pengajuan(view, ctx) {
         <aside class="card stack">
           <h3>Status</h3>${timeline(latest)}
           <h3>Berkas</h3>${daftarBerkas(latest)}
+          ${bisaGanti ? `<button class="btn primary" data-ganti>${icon('upload')} Ganti berkas</button>` : ''}
           ${latest.status === 'menunggu' ? `<button class="btn ghost" data-batal="${latest.id}">${icon('x')} Batalkan pengajuan</button>` : ''}
           ${['selesai', 'remidi'].includes(latest.status) ? `<a class="btn primary" href="#/murid/hasil">${icon('award')} Lihat hasil</a>` : ''}
         </aside></section>` : ''}
@@ -221,8 +226,66 @@ export async function pengajuan(view, ctx) {
     ctx.go('#/murid/pengajuan');
   });
 
+  view.querySelector('[data-ganti]')?.addEventListener('click', () => gantiBerkas(latest, ctx));
   kartuHariIni($('[data-hari-ini]', view));
   if (bisaAjukan) await formPengajuan($('[data-form]', view), ctx);
+}
+
+// Ganti berkas presentasi remidi: pilih satu atau lebih berkas pengganti
+function gantiBerkas(peng, ctx) {
+  const files = {};
+  const md = modal({
+    title: 'Ganti berkas remidi',
+    wide: true,
+    body: `<div class="stack">
+      <p class="small muted">Pilih berkas yang ingin diganti saja. Berkas yang tidak dipilih tetap memakai versi sekarang.</p>
+      ${Object.entries(JENIS).map(([k, j]) => {
+        const lama = peng[`file_${k}`];
+        return `<div class="field"><span class="label">${j.label}</span>
+          <label class="drop" data-drop="${k}">
+            <input type="file" accept="${j.accept}" aria-label="${j.label} baru" />
+            <span class="ic">${icon(k === 'ppt' ? 'slides' : k === 'bimbingan' ? 'book' : 'file')}</span>
+            <span class="tx"><b data-name>Pilih berkas pengganti</b><span data-meta>Sekarang: ${esc(lama?.name || '-')} (${j.ket})</span><div class="progress hidden"><i></i></div></span>
+          </label></div>`;
+      }).join('')}
+    </div>`,
+    footer: '<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-ok disabled>Simpan berkas baru</button>',
+  });
+  const ok = $('[data-ok]', md.el);
+  $$('[data-drop]', md.el).forEach((drop) => {
+    const k = drop.dataset.drop;
+    const input = drop.querySelector('input');
+    const set = (f) => {
+      const err = validasi(f, k);
+      if (err) { toast(err, 'err'); input.value = ''; return; }
+      files[k] = f;
+      drop.classList.add('done');
+      drop.querySelector('[data-name]').textContent = f.name;
+      drop.querySelector('[data-meta]').textContent = `${ukuran(f.size)} · siap diunggah`;
+      ok.disabled = false;
+    };
+    input.addEventListener('change', () => input.files[0] && set(input.files[0]));
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && set(e.dataTransfer.files[0]); });
+  });
+  ok.addEventListener('click', () => withBusy(ok, async () => {
+    let n = 0;
+    for (const [k, f] of Object.entries(files)) {
+      const drop = $(`[data-drop="${k}"]`, md.el);
+      const bar = drop.querySelector('.progress'); bar.classList.remove('hidden');
+      try {
+        const up = await uploadFile(f, k, { nis: state.profile.nis, onProgress: (r) => (bar.firstElementChild.style.width = `${Math.round(r * 100)}%`) });
+        const { error } = await sb.rpc('ganti_berkas', { p_id: peng.id, p_jenis: k, p_file: up });
+        if (error) { await hapusFile(up); throw error; }
+        drop.querySelector('[data-meta]').textContent = `${ukuran(f.size)} · tersimpan`;
+        n++;
+      } catch (err) { toast(errMsg(err), 'err'); return; }
+    }
+    md.close();
+    toast(`${n} berkas diganti. Guru sudah diberi tahu.`);
+    ctx.go('#/murid/pengajuan');
+  }));
 }
 
 // Kartu "Presentasi hari ini": hanya muncul bila ada jadwal hari ini

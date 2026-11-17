@@ -4,7 +4,7 @@ import {
   INDIKATOR_A, KOMPLEKSITAS, PORSI, KESELARASAN, ATURAN_B, PERTANYAAN_PEMANDU, sumA, lengkapA, predikat, levelOf, fmtNilai,
 } from '../lib/rubrik.js';
 import { daftarBerkas } from './murid.js';
-import { notFound } from './guru.js';
+import { notFound, jadwalkanRemidi } from './guru.js';
 import { NAMA_SEKOLAH } from '../config.js';
 
 const SEL = '*, murid:profiles!pengajuan_murid_id_fkey(id, nama, nis, kelas, dudi, kompleksitas, porsi), hasil(*), penilaian(*)';
@@ -93,7 +93,8 @@ export async function formNilai(view, ctx) {
     <div class="page-head"><div><a href="#/guru/penilaian" class="back">${icon('chevl')} Daftar penilaian</a>
       <h1>${esc(m.nama)}</h1>
       <p>${esc(m.kelas)} · ${esc(m.dudi)} · ${esc(fmtTanggal(r.tanggal))}, ${fmtJam(r.jam_mulai)}${r.percobaan > 1 ? ` · percobaan ke-${r.percobaan}` : ''}</p></div>
-      <div class="row">${badge(r.status)}<span class="badge plain">${mode === 'banyak' ? 'Mode beberapa penguji' : 'Mode penguji tunggal'}</span></div></div>
+      <div class="row">${badge(r.status)}<span class="badge plain">${mode === 'banyak' ? 'Mode beberapa penguji' : 'Mode penguji tunggal'}</span>
+        ${r.status === 'remidi' ? `<button type="button" class="btn sm primary" data-remidi>${icon('calendar')} Jadwalkan remidi</button>` : ''}</div></div>
 
     <form class="cols" novalidate data-form>
       <div class="stack-lg">
@@ -158,6 +159,7 @@ export async function formNilai(view, ctx) {
       <aside class="card stack sticky" data-sum></aside>
     </form>`;
 
+  $('[data-remidi]', view)?.addEventListener('click', () => jadwalkanRemidi(r, ctx));
   const form = $('[data-form]', view);
   const num = (n) => { const v = form[n]?.value; return v === '' || v == null ? null : Number(v); };
   const readA = () => Object.fromEntries(INDIKATOR_A.map((i) => [i.key, num(i.key)]));
