@@ -50,6 +50,10 @@ export async function callAdmin(payload) {
   return data;
 }
 
+// KKM (Kriteria Ketuntasan Minimal), bisa diubah di Pengaturan. Bawaan 75.
+export const getKKM = () => { const v = Number(state.settings.kkm); return v > 0 && v <= 100 ? v : 75; };
+export const kkmCls = (t) => (t != null && t !== '' && Number(t) < getKKM() ? 'below-kkm' : '');
+
 export const isStaff = () => ['guru', 'admin'].includes(state.profile?.role);
 export const isAdmin = () => state.profile?.role === 'admin';
 export const profilLengkap = (p = state.profile) =>

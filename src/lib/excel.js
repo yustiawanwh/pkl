@@ -1,7 +1,7 @@
 // Ekspor rekap nilai ke Excel (format mengikuti sheet "Rekap Kelas" pada form penilaian)
 import { INDIKATOR_A } from './rubrik.js';
 
-export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = '' } = {}) {
+export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = '', kkm = 75 } = {}) {
   const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Aplikasi Presentasi PKL';
@@ -44,6 +44,7 @@ export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = 
       r.predikat || '', r.catatan_rekap || ''];
     row.eachCell({ includeEmpty: true }, (c, col) => { if (col <= 8) { c.border = border; c.alignment = { vertical: 'top', wrapText: col === 8 }; } });
     ['D', 'E', 'F'].forEach((col) => { ws.getCell(`${col}${11 + i}`).numFmt = '0.##'; });
+    if (r.total != null && Number(r.total) < kkm) ws.getCell(`F${11 + i}`).font = { bold: true, color: { argb: 'FFB23A48' } };
   });
 
   // ---- Sheet 2: Detail Nilai

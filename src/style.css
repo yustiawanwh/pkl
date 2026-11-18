@@ -812,3 +812,15 @@ hr.sep { border: 0; border-top: 1px dashed var(--line); margin: 0; }
   table.responsive td > .badge, table.responsive td > .file-chip { justify-self: start; }
 }
 a.loading { opacity: .6; pointer-events: none; cursor: progress; }
+
+/* Nilai di bawah KKM: merah lembut (tidak menyilaukan), tetap kontras di latar terang & gelap */
+:root { --below: #C0404F; --below-soft: #FBEAEC; }
+[data-theme='dark'] { --below: #F0959F; --below-soft: #3A1E25; }
+.below-kkm { color: var(--below) !important; }
+.kkm-note { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 3px 10px; border-radius: 999px; background: var(--below-soft); color: var(--below); font-size: 12.5px; font-weight: 600; }
+.kkm-note svg.i { width: 14px; height: 14px; }
+@media print {
+  .rp .below-kkm, .rp .below-kkm b { color: #B23A48 !important; }
+  .rp-final.below-kkm { border-color: #D98A94; background: #FDF1F2; }
+  .rp-final.below-kkm b { color: #B23A48; }
+}

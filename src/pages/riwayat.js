@@ -1,5 +1,5 @@
 // Riwayat & progres presentasi PKL + laporan cetak (PDF lewat dialog cetak browser)
-import { sb, state, profilLengkap } from '../lib/supa.js';
+import { sb, state, profilLengkap, getKKM, kkmCls } from '../lib/supa.js';
 import { $, $$, esc, icon, modal, fmtTanggal, fmtJam, fmtWaktu, today, badge, emptyState, initials, STATUS } from '../lib/ui.js';
 import { INDIKATOR_A, fmtNilai } from '../lib/rubrik.js';
 import { NAMA_SEKOLAH } from '../config.js';
@@ -116,7 +116,7 @@ export async function riwayat(view) {
         <td class="nowrap">${r.terakhir?.tanggal ? `${esc(tglPendek(r.terakhir.tanggal))}<div class="small muted">${fmtJam(r.terakhir.jam_mulai)} WIB</div>` : '<span class="muted">-</span>'}</td>
         <td class="num">${r.percobaan || '-'}</td>
         <td>${tahapBadge(r.tahap)}</td>
-        <td class="num nowrap">${r.nilai ? `<b>${fmtNilai(r.nilai.hasil.total)}</b><div class="small muted">${esc(r.nilai.hasil.predikat)}</div>` : '<span class="muted">-</span>'}</td>
+        <td class="num nowrap">${r.nilai ? `<b class="${kkmCls(r.nilai.hasil.total)}">${fmtNilai(r.nilai.hasil.total)}</b><div class="small muted">${esc(r.nilai.hasil.predikat)}</div>` : '<span class="muted">-</span>'}</td>
       </tr>`).join('')}</tbody></table></div>`
       : `<div class="card">${emptyState('users', 'Tidak ada murid', 'Ubah filter kelas, tahap, atau kata kunci.')}</div>`;
     $$('[data-id]', view).forEach((tr) => {
@@ -149,7 +149,7 @@ function detailMurid(r, guru) {
         </div>
         <p class="small muted">Diajukan ${esc(fmtWaktu(p.created_at))}${p.diverifikasi_at ? `, diverifikasi ${esc(guru[p.diverifikasi_oleh] || 'guru')} ${esc(fmtWaktu(p.diverifikasi_at))}` : ''}</p>
         ${p.feedback ? `<p class="small"><b>Feedback:</b> ${esc(p.feedback)}</p>` : ''}
-        ${h ? `<div class="hist-score"><b>${fmtNilai(h.total)}</b><span>${esc(h.predikat)}</span><span class="muted">A ${fmtNilai(h.nilai_a)} + B ${fmtNilai(h.nilai_b)}</span></div>
+        ${h ? `<div class="hist-score"><b class="${kkmCls(h.total)}">${fmtNilai(h.total)}</b><span>${esc(h.predikat)}</span><span class="muted">A ${fmtNilai(h.nilai_a)} + B ${fmtNilai(h.nilai_b)}</span></div>
           ${h.remidi && h.info_remidi ? `<p class="small"><b>Info remidi:</b> ${esc(h.info_remidi)}</p>` : ''}` : ''}
       </div></li>`;
   }).join('') : '';
@@ -231,9 +231,9 @@ function cetakKelas(rs, f) {
     <section class="rp-summary">
       <div><span>Jumlah murid</span><b>${n}</b></div>
       <div><span>Selesai</span><b>${count.selesai}</b><small>${n ? Math.round((count.selesai / n) * 100) : 0}%</small></div>
-      <div><span>Remidi</span><b>${count.remidi}</b></div>
+      <div><span>Di bawah KKM ${getKKM()}</span><b class="${tot.some((x) => kkmCls(x)) ? 'below-kkm' : ''}">${tot.filter((x) => kkmCls(x)).length}</b></div>
       <div><span>Belum presentasi</span><b>${count.data + count.belum + count.ulang + count.menunggu + count.terjadwal}</b></div>
-      <div><span>Rata-rata nilai</span><b>${fmtNilai(avg)}</b></div>
+      <div><span>Rata-rata nilai</span><b class="${kkmCls(avg)}">${fmtNilai(avg)}</b></div>
       <div><span>Tertinggi / terendah</span><b>${tot.length ? `${fmtNilai(Math.max(...tot))} / ${fmtNilai(Math.min(...tot))}` : '-'}</b></div>
     </section>
     <section class="rp-two">
@@ -252,10 +252,10 @@ function cetakKelas(rs, f) {
           <td>${r.terakhir?.tanggal ? `${esc(fmtTanggal(r.terakhir.tanggal, false))}, ${fmtJam(r.terakhir.jam_mulai)}` : '-'}</td>
           <td class="n">${r.percobaan || '-'}</td><td>${esc(TAHAP_MAP[r.tahap].label)}</td>
           <td class="n">${h ? fmtNilai(h.nilai_a) : '-'}</td><td class="n">${h ? fmtNilai(h.nilai_b) : '-'}</td>
-          <td class="n"><b>${h ? fmtNilai(h.total) : '-'}</b></td><td>${h ? esc(h.predikat) : '-'}</td></tr>`;
+          <td class="n"><b class="${h ? kkmCls(h.total) : ''}">${h ? fmtNilai(h.total) : '-'}</b></td><td>${h ? esc(h.predikat) : '-'}</td></tr>`;
       }).join('') || '<tr><td colspan="13">Tidak ada data.</td></tr>'}</tbody>
     </table>
-    <p class="rp-note">Nilai akhir = Komponen A (kualitas presentasi dan pemahaman, maks. 70) + Komponen B (tingkat tantangan pekerjaan, maks. 30). Nilai yang ditampilkan adalah hasil terbaru yang sudah dipublikasikan.</p>
+    <p class="rp-note">KKM ${getKKM()}; nilai akhir di bawah KKM dicetak merah. Nilai akhir = Komponen A (kualitas presentasi dan pemahaman, maks. 70) + Komponen B (tingkat tantangan pekerjaan, maks. 30). Nilai yang ditampilkan adalah hasil terbaru yang sudah dipublikasikan.</p>
     ${ttd()}
   </div>`;
   cetak(html, { judulFile: `Laporan_Progres_PKL_${(f.kelas || 'Semua_kelas').replace(/\W+/g, '_')}_${tglFile()}`, orientasi: 'landscape' });
@@ -284,7 +284,7 @@ function cetakMurid(r, guru) {
         return `<tr><td class="n">${i + 1}</td><td>${esc(fmtWaktu(p.created_at))}</td>
           <td>${p.tanggal ? `${esc(fmtTanggal(p.tanggal, false))}, ${fmtJam(p.jam_mulai)}–${fmtJam(p.jam_selesai)}${p.ruang ? `, ${esc(p.ruang)}` : ''}` : '-'}</td>
           <td>${esc(STATUS[p.status] || p.status)}</td><td>${esc(guru[p.diverifikasi_oleh] || '-')}</td><td>${esc(p.feedback || '-')}</td>
-          <td class="n">${hh ? fmtNilai(hh.total) : '-'}</td><td>${hh ? esc(hh.predikat) : '-'}</td></tr>`;
+          <td class="n ${hh ? kkmCls(hh.total) : ''}">${hh ? fmtNilai(hh.total) : '-'}</td><td>${hh ? esc(hh.predikat) : '-'}</td></tr>`;
       }).join('') || '<tr><td colspan="8">Belum ada pengajuan.</td></tr>'}</tbody>
     </table>
 
@@ -300,7 +300,7 @@ function cetakMurid(r, guru) {
           <tr><td>Porsi kontribusi (${esc(h.porsi)})</td><td class="n">${fmtNilai(h.b2)}</td><td class="n">10</td></tr>
           <tr><td>Keselarasan bukti (${esc(h.keselarasan)})</td><td class="n">${fmtNilai(h.b3)}</td><td class="n">5</td></tr>
           <tr class="rp-sum"><td>Jumlah Komponen B</td><td class="n">${fmtNilai(h.nilai_b)}</td><td class="n">30</td></tr></tbody></table>
-        <div class="rp-final"><span>Nilai akhir</span><b>${fmtNilai(h.total)}</b><span>${esc(h.predikat)}${h.remidi ? ' (remidi)' : ''}</span></div>
+        <div class="rp-final ${kkmCls(h.total)}"><span>Nilai akhir</span><b>${fmtNilai(h.total)}</b><span>${esc(h.predikat)}${h.remidi ? ' (remidi)' : ''}${kkmCls(h.total) ? `, di bawah KKM ${getKKM()}` : ''}</span></div>
       </div>
     </section>
     <table class="rp-id rp-notes">

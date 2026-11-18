@@ -1,4 +1,4 @@
-import { sb, state, loadProfile, isStaff, profilLengkap } from '../lib/supa.js';
+import { sb, state, loadProfile, isStaff, profilLengkap, getKKM, kkmCls } from '../lib/supa.js';
 import {
   $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, fmtTanggal, fmtJam, fmtWaktu, today, badge,
   ticket, emptyState, pwField, pwToggle, slotCard, sisaBadge,
@@ -487,11 +487,13 @@ function kartuHasil(r) {
       </div>
       <div class="total-box tinted">
         <span class="label">Nilai akhir</span>
-        <div class="total-big">${fmtNilai(h.total)}</div>
+        <div class="total-big ${kkmCls(h.total)}">${fmtNilai(h.total)}</div>
+        ${kkmCls(h.total) ? `<span class="kkm-note">${icon('alert')}Di bawah KKM ${getKKM()}</span>` : ''}
         <div class="meter" aria-hidden="true"><i class="a" style="width:${h.nilai_a}%"></i><i class="b" style="width:${h.nilai_b}%"></i></div>
         <div class="sum-row"><span>Komponen A</span><b>${fmtNilai(h.nilai_a)} / 70</b></div>
         <div class="sum-row"><span>Komponen B</span><b>${fmtNilai(h.nilai_b)} / 30</b></div>
         <div class="sum-row"><span>Predikat</span><b>${esc(h.predikat)}</b></div>
+        <div class="sum-row"><span>KKM</span><b>${getKKM()}</b></div>
       </div>
     </div>
     <div class="grid-2">

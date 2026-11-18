@@ -1,4 +1,4 @@
-import { sb, state, saveSetting, callAdmin, isAdmin } from '../lib/supa.js';
+import { sb, state, saveSetting, callAdmin, isAdmin, getKKM } from '../lib/supa.js';
 import { $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, modal, pwField, pwToggle, initials } from '../lib/ui.js';
 
 export async function pengaturan(view, ctx) {
@@ -24,6 +24,14 @@ export async function pengaturan(view, ctx) {
         <div class="field ${kp.tampil ? '' : 'hidden'}" data-kp-nama><label for="f-kp">Nama Kepala Program Keahlian</label>
           <input class="input" id="f-kp" name="kp_nama" value="${esc(kp.nama || '')}" placeholder="Kosongkan bila ingin ditulis tangan" /></div>
         <div class="row" style="justify-content:flex-end"><button class="btn primary" data-save-kp>${icon('check')} Simpan</button></div>
+      </section>
+
+      <section class="card stack" data-kkm>
+        <div><h2>KKM (Kriteria Ketuntasan Minimal)</h2><p class="muted small mt-xs">Nilai akhir di bawah KKM ditandai merah di halaman penilaian, rekap, riwayat, hasil murid, laporan cetak, dan ekspor Excel.</p></div>
+        <div class="row">
+          <input class="input" type="number" name="kkm" min="1" max="100" step="1" value="${getKKM()}" style="width:120px" aria-label="Nilai KKM" />
+          <button class="btn primary" data-save-kkm>${icon('check')} Simpan KKM</button>
+        </div>
       </section>
 
       <section class="card stack">
@@ -66,6 +74,15 @@ export async function pengaturan(view, ctx) {
     const aktif = pgEl.querySelector('[name=pg_aktif]').checked;
     if (aktif && !isi) return toast('Tulis isi pengumuman, atau matikan "Tampilkan".', 'err');
     try { await saveSetting('pengumuman', { aktif, isi }); toast(aktif ? 'Pengumuman tampil di halaman awal.' : 'Pengumuman disimpan dan disembunyikan.'); }
+    catch (err) { toast(errMsg(err), 'err'); }
+  }));
+
+  // ---- KKM
+  const kkmEl = $('[data-kkm]', view);
+  $('[data-save-kkm]', kkmEl).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
+    const v = Number(kkmEl.querySelector('[name=kkm]').value);
+    if (!Number.isFinite(v) || v < 1 || v > 100) return toast('KKM harus angka 1 sampai 100.', 'err');
+    try { await saveSetting('kkm', Math.round(v * 100) / 100); toast(`KKM disimpan: ${v}.`); }
     catch (err) { toast(errMsg(err), 'err'); }
   }));
 

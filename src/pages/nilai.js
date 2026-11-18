@@ -1,4 +1,4 @@
-import { sb, state } from '../lib/supa.js';
+import { sb, state, getKKM, kkmCls } from '../lib/supa.js';
 import { $, $$, esc, icon, toast, errMsg, withBusy, confirmDialog, fmtTanggal, fmtJam, badge, emptyState, today } from '../lib/ui.js';
 import {
   INDIKATOR_A, KOMPLEKSITAS, PORSI, KESELARASAN, ATURAN_B, PERTANYAAN_PEMANDU, sumA, lengkapA, predikat, levelOf, fmtNilai,
@@ -43,7 +43,7 @@ export async function daftarPenilaian(view) {
           <td>${r.tanggal === t ? '<b>Hari ini</b>' : esc(fmtTanggal(r.tanggal, false))}<div class="small muted">${fmtJam(r.jam_mulai)} ${esc(r.ruang || '')}</div></td>
           <td><div class="who"><b>${esc(r.murid?.nama)}</b><span>${esc(r.murid?.kelas)} · ${esc(r.judul)}</span></div></td>
           <td class="small">${r.penilaian.length} penguji${mine ? ' (termasuk Anda)' : ''}</td>
-          <td class="num"><b>${fmtNilai(r.hasil?.total)}</b>${r.hasil?.predikat ? `<div class="small muted">${esc(r.hasil.predikat)}</div>` : ''}</td>
+          <td class="num"><b class="${kkmCls(r.hasil?.total)}">${fmtNilai(r.hasil?.total)}</b>${r.hasil?.predikat ? `<div class="small muted">${esc(r.hasil.predikat)}</div>` : ''}</td>
           <td>${st}</td><td class="num">${icon('chevr')}</td></tr>`;
       }).join('')}</tbody></table></div>`
       : `<div class="card">${emptyState('clipboard', f.tab === 'belum' ? 'Tidak ada yang menunggu dinilai' : 'Belum ada data', 'Presentasi muncul di sini setelah pengajuannya disetujui.')}</div>`;
@@ -200,12 +200,14 @@ export async function formNilai(view, ctx) {
     const sumMine = sumA(myA);
     $('[data-sum]', view).innerHTML = `
       <span class="label">Nilai akhir</span>
-      <div class="total-big">${total == null ? '–' : fmtNilai(total)}</div>
+      <div class="total-big ${kkmCls(total)}">${total == null ? '–' : fmtNilai(total)}</div>
+      ${total != null && kkmCls(total) ? `<span class="kkm-note">${icon('alert')}Di bawah KKM ${getKKM()}</span>` : ''}
       <div class="meter" aria-hidden="true"><i class="a" style="width:${nilaiA || 0}%"></i><i class="b" style="width:${nilaiB || 0}%"></i></div>
       <div>
         <div class="sum-row"><span>Komponen A${pool.length > 1 ? ` (rata-rata ${pool.length} penguji)` : ''}</span><b>${fmtNilai(nilaiA)} / 70</b></div>
         <div class="sum-row"><span>Komponen B</span><b>${fmtNilai(nilaiB)} / 30</b></div>
         <div class="sum-row"><span>Predikat</span><b>${esc(predikat(total))}</b></div>
+        <div class="sum-row"><span>KKM</span><b>${getKKM()}</b></div>
       </div>
       ${mode === 'banyak' ? `<div class="stack" style="gap:4px"><span class="label">Nilai A per penguji</span>
         ${pool.length ? pool.map((p) => `<div class="sum-row"><span>${esc(p.nama)}</span><b>${fmtNilai(p.total)}</b></div>`).join('') : '<p class="small muted">Belum ada penguji yang melengkapi nilai.</p>'}
@@ -317,11 +319,11 @@ export async function rekap(view) {
     const dist = ['A', 'B', 'C', 'D'].map((k) => dinilai.filter((r) => r.predikat?.startsWith(k)).length);
     $('[data-stats]', view).innerHTML = `<div class="stats">
       <div class="stat pri"><b>${dinilai.length}<span class="muted" style="font-size:16px"> / ${rs.length}</span></b><span>Murid dinilai</span></div>
-      <div class="stat"><b>${fmtNilai(avg == null ? null : Math.round(avg * 100) / 100)}</b><span>Rata-rata nilai akhir</span></div>
-      <div class="stat ok"><b>${fmtNilai(tot.length ? Math.max(...tot) : null)}</b><span>Tertinggi</span></div>
-      <div class="stat bad"><b>${fmtNilai(tot.length ? Math.min(...tot) : null)}</b><span>Terendah</span></div>
+      <div class="stat"><b class="${kkmCls(avg)}">${fmtNilai(avg == null ? null : Math.round(avg * 100) / 100)}</b><span>Rata-rata nilai akhir</span></div>
+      <div class="stat"><b class="${tot.length ? kkmCls(Math.max(...tot)) : ''}">${fmtNilai(tot.length ? Math.max(...tot) : null)}</b><span>Tertinggi</span></div>
+      <div class="stat"><b class="${tot.length ? kkmCls(Math.min(...tot)) : ''}">${fmtNilai(tot.length ? Math.min(...tot) : null)}</b><span>Terendah</span></div>
     </div>
-    ${dinilai.length ? `<div class="card" style="margin-bottom:16px"><div class="row between"><b>Sebaran predikat</b><span class="small muted">${dinilai.filter((r) => r.remidi).length} murid remidi</span></div>
+    ${dinilai.length ? `<div class="card" style="margin-bottom:16px"><div class="row between"><b>Sebaran predikat</b><span class="small muted"><span class="below-kkm">${dinilai.filter((r) => kkmCls(r.total)).length} di bawah KKM ${getKKM()}</span>, ${dinilai.filter((r) => r.remidi).length} murid remidi</span></div>
       <div class="meter" style="height:14px;margin-top:12px">${dist.map((n, i) => n ? `<i style="width:${(n / dinilai.length) * 100}%;background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}" title="${['A', 'B', 'C', 'D'][i]}: ${n}"></i>` : '').join('')}</div>
       <div class="cal-legend">${['A (90–100)', 'B (80–89)', 'C (70–79)', 'D (<70)'].map((l, i) => `<span><i style="background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}"></i>${l}: ${dist[i]}</span>`).join('')}</div></div>` : ''}`;
     $('[data-list]', view).innerHTML = rs.length ? `<div class="table-wrap"><table class="t">
@@ -330,7 +332,7 @@ export async function rekap(view) {
         <td><div class="who"><b>${esc(r.nama)}</b><span>${esc(r.kelas || '')} · NIS ${esc(r.nis || '')}</span></div></td>
         <td class="small">${esc(r.dudi || '-')}</td>
         <td class="num">${fmtNilai(r.nilai_a)}</td><td class="num">${fmtNilai(r.nilai_b)}</td>
-        <td class="num"><b>${fmtNilai(r.total)}</b></td>
+        <td class="num"><b class="${kkmCls(r.total)}">${fmtNilai(r.total)}</b></td>
         <td>${r.predikat ? esc(r.predikat) : '<span class="muted small">Belum dinilai</span>'}${r.remidi ? ' <span class="badge remidi">Remidi</span>' : ''}</td>
         <td class="num">${latest[r.id] ? `<a class="btn sm ghost" href="#/guru/nilai/${latest[r.id].id}">Buka</a>` : ''}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="card">${emptyState('chart', 'Belum ada data', 'Murid yang terdaftar akan muncul di sini.')}</div>`;
@@ -340,7 +342,7 @@ export async function rekap(view) {
   $('[data-xls]', view).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
     try {
       const { eksporRekap } = await import('../lib/excel.js');
-      await eksporRekap(filtered(), { judulKelas: f.kelas || 'Semua kelas', sekolah: NAMA_SEKOLAH });
+      await eksporRekap(filtered(), { judulKelas: f.kelas || 'Semua kelas', sekolah: NAMA_SEKOLAH, kkm: getKKM() });
       toast('File Excel diunduh.');
     } catch (err) { toast(errMsg(err), 'err'); }
   }));
