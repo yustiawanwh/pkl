@@ -13,11 +13,11 @@ export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = 
 
   // ---- Sheet 1: Rekap Kelas
   const ws = wb.addWorksheet('Rekap Kelas', { views: [{ state: 'frozen', ySplit: 10 }] });
-  ws.columns = [{ width: 5 }, { width: 32 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 13 }, { width: 20 }, { width: 44 }];
-  ws.mergeCells('A1:H1');
+  ws.columns = [{ width: 5 }, { width: 32 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 13 }, { width: 20 }, { width: 44 }, { width: 28 }];
+  ws.mergeCells('A1:I1');
   ws.getCell('A1').value = 'Rekap Kelas – Presentasi PKL (RPL Kelas XII)';
   ws.getCell('A1').font = { bold: true, size: 14, color: { argb: navy } };
-  ws.mergeCells('A2:H2');
+  ws.mergeCells('A2:I2');
   ws.getCell('A2').value = `${sekolah ? sekolah + ' – ' : ''}${judulKelas} – diekspor ${new Date().toLocaleString('id-ID')}`;
   ws.getCell('A2').font = { italic: true, color: { argb: 'FF6B7390' } };
 
@@ -34,15 +34,15 @@ export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = 
     ws.getCell(`C${4 + i}`).value = v; ws.getCell(`C${4 + i}`).font = { bold: true };
   });
   ws.getCell('A9').value = 'Daftar nilai murid'; ws.getCell('A9').font = { bold: true, color: { argb: navy } };
-  const head = ['No', 'Nama murid', 'Kelas', 'Nilai A (maks 70)', 'Nilai B (maks 30)', 'Nilai akhir', 'Predikat', 'Catatan'];
+  const head = ['No', 'Nama murid', 'Kelas', 'Nilai A (maks 70)', 'Nilai B (maks 30)', 'Nilai akhir', 'Predikat', 'Catatan', 'Penguji'];
   ws.getRow(10).values = head;
   ws.getRow(10).eachCell((c) => { c.font = { bold: true }; c.fill = headFill; c.border = border; c.alignment = { vertical: 'middle', wrapText: true }; });
   rows.forEach((r, i) => {
     const row = ws.getRow(11 + i);
     row.values = [i + 1, r.nama, r.kelas, r.nilai_a ?? null, r.nilai_b ?? null,
       r.total != null ? { formula: `D${11 + i}+E${11 + i}`, result: Number(r.total) } : null,
-      r.predikat || '', r.catatan_rekap || ''];
-    row.eachCell({ includeEmpty: true }, (c, col) => { if (col <= 8) { c.border = border; c.alignment = { vertical: 'top', wrapText: col === 8 }; } });
+      r.predikat || '', r.catatan_rekap || '', r.penguji || ''];
+    row.eachCell({ includeEmpty: true }, (c, col) => { if (col <= 9) { c.border = border; c.alignment = { vertical: 'top', wrapText: col >= 8 }; } });
     ['D', 'E', 'F'].forEach((col) => { ws.getCell(`${col}${11 + i}`).numFmt = '0.##'; });
     if (r.total != null && Number(r.total) < kkm) ws.getCell(`F${11 + i}`).font = { bold: true, color: { argb: 'FFB23A48' } };
   });
@@ -51,7 +51,7 @@ export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = 
   const wd = wb.addWorksheet('Detail Nilai', { views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }] });
   const cols = [
     ['No', 5], ['Nama murid', 28], ['Kelas', 12], ['NIS', 12], ['Tempat PKL (DUDI)', 26], ['Judul project', 36], ['Tanggal presentasi', 16], ['Percobaan', 10],
-    ['Kompleksitas', 13], ['Porsi', 10], ['Keselarasan bukti', 20], ['Jumlah penguji', 10],
+    ['Kompleksitas', 13], ['Porsi', 10], ['Keselarasan bukti', 20], ['Jumlah penguji', 10], ['Penguji', 26],
     ...INDIKATOR_A.map((i, k) => [`A${k + 1} (${i.bobot})`, 9]), ['Nilai A', 10],
     ['B1 (15)', 9], ['B2 (10)', 9], ['B3 (5)', 9], ['Nilai B', 10], ['Nilai akhir', 11], ['Predikat', 18], ['Remidi', 9], ['Info remidi', 30],
     ['Evaluasi & feedback', 40], ['Saran', 30], ['Kritik', 30], ['Catatan', 30],
@@ -62,7 +62,7 @@ export async function eksporRekap(rows, { judulKelas = 'Semua kelas', sekolah = 
   rows.forEach((r, i) => {
     const row = wd.addRow([
       i + 1, r.nama, r.kelas, r.nis, r.dudi, r.judul, r.tanggal || '', r.percobaan || '',
-      r.kompleksitas || '', r.porsi || '', r.keselarasan || '', r.jumlah_penguji ?? '',
+      r.kompleksitas || '', r.porsi || '', r.keselarasan || '', r.jumlah_penguji ?? '', r.penguji || '',
       ...INDIKATOR_A.map((ind) => (r.rataA?.[ind.key] ?? null)), r.nilai_a ?? null,
       r.b1 ?? null, r.b2 ?? null, r.b3 ?? null, r.nilai_b ?? null, r.total ?? null, r.predikat || '',
       r.remidi ? 'Ya' : r.total != null ? 'Tidak' : '', r.info_remidi || '',

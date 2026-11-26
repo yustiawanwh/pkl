@@ -7,6 +7,7 @@ import { KOMPLEKSITAS, PORSI } from '../lib/rubrik.js';
 import { calendar, monthRange } from '../lib/calendar.js';
 import { daftarBerkas } from './murid.js';
 import { bukaBerkasMurid } from './berkas.js';
+import { pemilihPenguji, teksPenguji, samaPenguji, modeBanyak } from '../lib/penguji.js';
 
 const SEL = '*, murid:profiles!pengajuan_murid_id_fkey(id, nama, nis, kelas, dudi, judul, kompleksitas, porsi), hasil(dipublikasi, total, predikat, remidi)';
 const who = (m) => `<div class="who"><b>${esc(m?.nama)}</b><span>${esc(m?.kelas || '')}${m?.nis ? ' · NIS ' + esc(m.nis) : ''}</span></div>`;
@@ -57,7 +58,7 @@ export async function beranda(view) {
             return listItem({
               href: `#/guru/nilai/${r.id}`,
               lead: `<span class="date-chip ${r.tanggal === t ? 'today' : ''}"><b>${d.getDate()}</b><span>${esc(d.toLocaleDateString('id-ID', { month: 'short' }))}</span></span>`,
-              title: esc(r.murid?.nama), sub: esc(r.murid?.kelas || ''),
+              title: esc(r.murid?.nama), sub: esc([r.murid?.kelas, teksPenguji(r.penguji) && `Penguji: ${teksPenguji(r.penguji)}`].filter(Boolean).join(', ')),
               aside: `<b>${fmtJam(r.jam_mulai)}</b><span>${esc(r.ruang || '')}</span>`,
             });
           }).join('')}</div>`
@@ -83,19 +84,19 @@ export async function daftarPengajuan(view) {
       <div class="seg" role="tablist">${TABS.map(([k, l]) => `<button data-st="${k}" class="${k === f.status ? 'on' : ''}">${l} <span class="muted">${k ? all.filter((r) => r.status === k).length : all.length}</span></button>`).join('')}</div>
       <span class="spacer"></span>
       <select class="select" data-kelas><option value="">Semua kelas</option>${kelas.map((k) => `<option>${esc(k)}</option>`).join('')}</select>
-      <input class="input" type="search" placeholder="Cari nama, NIS, judul" data-q />
+      <input class="input" type="search" placeholder="Cari nama, NIS, judul, penguji" data-q />
     </div>
     <div data-list></div>`;
   const draw = () => {
     const q = f.q.toLowerCase();
     const rows = all.filter((r) => (!f.status || r.status === f.status) && (!f.kelas || r.murid?.kelas === f.kelas)
-      && (!q || `${r.murid?.nama} ${r.murid?.nis} ${r.judul} ${r.murid?.dudi}`.toLowerCase().includes(q)));
+      && (!q || `${r.murid?.nama} ${r.murid?.nis} ${r.judul} ${r.murid?.dudi} ${teksPenguji(r.penguji)}`.toLowerCase().includes(q)));
     $('[data-list]', view).innerHTML = rows.length ? `<div class="table-wrap"><table class="t">
       <thead><tr><th>Murid</th><th>Judul & DUDI</th><th>Jadwal</th><th>Diajukan</th><th>Status</th></tr></thead><tbody>
       ${rows.map((r) => `<tr class="click" data-id="${r.id}" tabindex="0">
         <td>${who(r.murid)}</td>
         <td><div class="who"><b style="font-weight:500">${esc(r.judul)}</b><span>${esc(r.murid?.dudi || '')}</span></div></td>
-        <td>${esc(jadwalStr(r))}${r.ruang ? `<div class="small muted">${esc(r.ruang)}</div>` : ''}</td>
+        <td>${esc(jadwalStr(r))}${r.ruang ? `<div class="small muted">${esc(r.ruang)}</div>` : ''}${teksPenguji(r.penguji) ? `<div class="small muted">Penguji: ${esc(teksPenguji(r.penguji))}</div>` : ''}</td>
         <td class="small">${esc(fmtWaktu(r.created_at))}${r.percobaan > 1 ? `<div class="small muted">Percobaan ke-${r.percobaan}</div>` : ''}</td>
         <td>${badge(r.status)}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="card">${emptyState('send', 'Tidak ada pengajuan', 'Coba ubah filter status atau kata kunci.')}</div>`;
@@ -111,6 +112,35 @@ export async function daftarPengajuan(view) {
   $('[data-q]', view).addEventListener('input', (e) => { f.q = e.target.value; draw(); });
   $('[data-kelas]', view).addEventListener('change', (e) => { f.kelas = e.target.value; draw(); });
   draw();
+}
+
+// Ganti penguji satu murid (mis. pindah penguji karena jadwal penguji lain sudah penuh)
+export async function gantiPenguji(r, done) {
+  let slotPj = null;
+  if (r.slot_id) {
+    const { data } = await sb.from('slots').select('penguji').eq('id', r.slot_id).maybeSingle();
+    slotPj = data?.penguji || null;
+  }
+  const md = modal({
+    title: 'Ganti penguji',
+    body: `<div class="stack">
+      <p class="small muted">Penguji untuk <b>${esc(r.murid?.nama || 'murid ini')}</b>${modeBanyak() ? ' (bisa lebih dari satu)' : ''}. Pilih dari akun guru, atau ketik nama lain untuk penguji tamu.
+        ${['menunggu', 'disetujui'].includes(r.status) ? 'Murid mendapat notifikasi.' : ''}</p>
+      <div data-pj></div>
+      ${slotPj && !samaPenguji(slotPj, r.penguji) ? `<button type="button" class="btn sm ghost" data-ikut-slot style="justify-self:start">${icon('refresh')} Kembalikan ke penguji slot (${esc(teksPenguji(slotPj, 'kosong'))})</button>` : ''}
+    </div>`,
+    footer: '<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-save>Simpan penguji</button>',
+  });
+  let pj = await pemilihPenguji($('[data-pj]', md.el), r.penguji || []);
+  $('[data-ikut-slot]', md.el)?.addEventListener('click', async (e) => {
+    pj = await pemilihPenguji($('[data-pj]', md.el), slotPj);
+    e.currentTarget.remove();
+  });
+  $('[data-save]', md.el).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
+    const { error } = await sb.from('pengajuan').update({ penguji: pj.get() }).eq('id', r.id);
+    if (error) return toast(errMsg(error), 'err');
+    md.close(); toast('Penguji disimpan.'); done?.();
+  }));
 }
 
 // =====================================================================
@@ -169,7 +199,12 @@ export async function detailPengajuan(view, ctx) {
             : `<p class="small muted">Pilih slot kosong untuk presentasi ulang. Jadwal langsung disetujui dan murid mendapat notifikasi. Berkas sebelumnya dipakai, dan murid bisa menggantinya.</p>
                <button class="btn primary" data-remidi>${icon('calendar')} Jadwalkan remidi</button>`}</div>`;
         })() : ''}
-        ${['menunggu', 'disetujui'].includes(r.status) ? `<div class="card stack"><h3>Pindah jadwal</h3><p class="small muted">Pindahkan murid ke slot lain bila jadwal berubah.</p><button class="btn ghost" data-pindah>${icon('calendar')} Pilih slot lain</button></div>` : ''}
+        ${['menunggu', 'disetujui', 'selesai', 'remidi'].includes(r.status) ? `<div class="card stack" data-pj-card><div class="row between"><h3>Penguji</h3>
+            <button class="btn sm ghost" data-ganti-pj>${icon('edit')} Ganti</button></div>
+          ${r.penguji?.length ? `<ul class="pj-list">${r.penguji.map((x) => `<li>${icon('user')}<span>${esc(x.nama)}${x.id ? '' : ' <small class="muted">(tamu)</small>'}</span></li>`).join('')}</ul>`
+            : '<p class="small muted">Belum ditentukan. Penguji ikut slot yang dipilih, atau tetapkan di sini.</p>'}
+        </div>` : ''}
+        ${['menunggu', 'disetujui'].includes(r.status) ? `<div class="card stack"><h3>Pindah jadwal</h3><p class="small muted">Pindahkan murid ke slot lain bila jadwal berubah. Penguji ikut penguji slot yang baru.</p><button class="btn ghost" data-pindah>${icon('calendar')} Pilih slot lain</button></div>` : ''}
       </aside>
     </div>`;
 
@@ -189,6 +224,7 @@ export async function detailPengajuan(view, ctx) {
   }));
 
   $('[data-remidi]', view)?.addEventListener('click', () => jadwalkanRemidi(r, ctx));
+  $('[data-ganti-pj]', view)?.addEventListener('click', () => gantiPenguji(r, () => ctx.go(`#/guru/pengajuan/${id}`)));
 
   $('[data-pindah]', view)?.addEventListener('click', async () => {
     const t = today();
@@ -270,7 +306,7 @@ export async function jadwal(view, ctx) {
     const [a, b] = monthRange(month);
     const [s, p] = await Promise.all([
       sb.rpc('daftar_slot', { p_dari: a, p_sampai: b }),
-      sb.from('pengajuan').select('id, slot_id, status, tanggal, jam_mulai, murid:profiles!pengajuan_murid_id_fkey(nama, kelas)').in('status', ['menunggu', 'disetujui', 'selesai', 'remidi']).gte('tanggal', a).lte('tanggal', b),
+      sb.from('pengajuan').select('id, slot_id, status, tanggal, jam_mulai, penguji, murid:profiles!pengajuan_murid_id_fkey(nama, kelas)').in('status', ['menunggu', 'disetujui', 'selesai', 'remidi']).gte('tanggal', a).lte('tanggal', b),
     ]);
     if (s.error) throw s.error;
     slots = s.data || []; bookings = p.data || [];
@@ -291,11 +327,12 @@ export async function jadwal(view, ctx) {
             <button class="btn icon sm ghost" data-edit-slot="${s.id}" aria-label="Ubah slot" title="Ubah slot">${icon('edit')}</button>
             <button class="btn icon sm ghost" data-del="${s.id}" ${s.terpakai ? 'disabled title="Slot sudah dipakai murid"' : 'title="Hapus slot"'} aria-label="Hapus slot">${icon('trash')}</button></span>` : ''}`,
           extra: bs.length
-            ? bs.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${esc(b.murid?.kelas || '')}</span></a>`).join('')
+            ? bs.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${esc(b.murid?.kelas || '')}</span>${
+                !samaPenguji(b.penguji, s.penguji) ? `<span class="booking-pj" title="Penguji diganti khusus murid ini">${icon('user')}${esc(teksPenguji(b.penguji, 'Tanpa penguji'))}</span>` : ''}</a>`).join('')
             : '<span class="muted small">Belum ada murid</span>',
         });
       }).join('')}</div>` : emptyState('calendar', 'Belum ada slot', 'Tambahkan slot agar murid bisa memilih jadwal di tanggal ini.')}
-      ${loose.length ? `<h3 class="mt">Presentasi lain di tanggal ini</h3><div class="list">${loose.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${fmtJam(b.jam_mulai)}</span></a>`).join('')}</div>` : ''}`;
+      ${loose.length ? `<h3 class="mt">Presentasi lain di tanggal ini</h3><div class="list">${loose.map((b) => `<a href="#/guru/pengajuan/${b.id}" class="booking">${badge(b.status)}<b>${esc(b.murid?.nama)}</b><span class="muted">${fmtJam(b.jam_mulai)}</span>${teksPenguji(b.penguji) ? `<span class="booking-pj">${icon('user')}${esc(teksPenguji(b.penguji))}</span>` : ''}</a>`).join('')}</div>` : ''}`;
     $('[data-add-day]', view).addEventListener('click', () => formSlot(d));
     $$('[data-edit-slot]', view).forEach((b) => b.addEventListener('click', () => formSlot(d, ds.find((x) => x.id === Number(b.dataset.editSlot)))));
     $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
@@ -327,6 +364,7 @@ export async function jadwal(view, ctx) {
       ? { tanggal: edit.tanggal, mulai: fmtJam(edit.jam_mulai), selesai: fmtJam(edit.jam_selesai), ruang: edit.ruang || '', kapasitas: edit.kapasitas, catatan: edit.catatan || '' }
       : { tanggal: tgl, mulai: '08:00', selesai: '08:20', ruang: '', kapasitas: 1, catatan: '' };
     const dipakai = edit?.terpakai || 0;
+    const pjAwal = edit ? edit.penguji || [] : [{ id: state.profile.id, nama: state.profile.nama }];
     const md = modal({
       title: edit ? 'Ubah slot' : 'Tambah slot',
       body: `<form class="stack" id="fs" novalidate>
@@ -337,16 +375,20 @@ export async function jadwal(view, ctx) {
         <div class="grid-2"><div class="field"><label for="fs-r">Ruang</label><input class="input" id="fs-r" name="ruang" value="${esc(v.ruang)}" placeholder="Lab RPL 1" /></div>
           <div class="field"><label for="fs-k">Kapasitas murid</label><input class="input" id="fs-k" type="number" name="kapasitas" value="${v.kapasitas}" min="${Math.max(1, dipakai)}" max="50" />
           ${dipakai ? `<span class="hint">Minimal ${dipakai} (murid yang sudah terdaftar)</span>` : ''}</div></div>
+        <div class="field"><span class="label">Penguji${modeBanyak() ? ' <span class="muted">(bisa lebih dari satu)</span>' : ''}</span><div data-pj></div>
+          <span class="hint">${dipakai ? 'Murid di slot ini ikut penguji baru, kecuali yang pengujinya sudah diganti khusus.' : 'Murid yang memilih slot ini otomatis mendapat penguji ini. Bisa diganti per murid di detail pengajuan.'}</span></div>
         <div class="field"><label for="fs-c">Catatan <span class="muted">(opsional)</span></label><input class="input" id="fs-c" name="catatan" value="${esc(v.catatan)}" placeholder="Mis. daring via Meet" /></div>
       </form>`,
       footer: `<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-save>${edit ? 'Simpan perubahan' : 'Simpan slot'}</button>`,
     });
+    const pjSiap = pemilihPenguji($('[data-pj]', md.el), pjAwal);
     $('[data-save]', md.el).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
+      const pj = await pjSiap;
       const f = Object.fromEntries(new FormData($('#fs', md.el)));
       if (!f.tanggal || !f.mulai || !f.selesai || f.selesai <= f.mulai) return toast('Periksa tanggal dan jam. Jam selesai harus setelah jam mulai.', 'err');
       const kap = Number(f.kapasitas) || 1;
       if (kap < dipakai) return toast(`Kapasitas minimal ${dipakai}, sesuai murid yang sudah terdaftar.`, 'err');
-      const row = { tanggal: f.tanggal, jam_mulai: f.mulai, jam_selesai: f.selesai, ruang: f.ruang.trim() || null, kapasitas: kap, catatan: f.catatan.trim() || null };
+      const row = { tanggal: f.tanggal, jam_mulai: f.mulai, jam_selesai: f.selesai, ruang: f.ruang.trim() || null, kapasitas: kap, catatan: f.catatan.trim() || null, penguji: pj.get() };
       const { error } = edit
         ? await sb.from('slots').update(row).eq('id', edit.id)
         : await sb.from('slots').insert(row);
@@ -372,11 +414,13 @@ export async function jadwal(view, ctx) {
         <div class="grid-3"><div class="field"><label>Jeda antarsesi (menit)</label><input class="input" type="number" name="jeda" value="0" min="0" max="120" /></div>
           <div class="field"><label>Ruang</label><input class="input" name="ruang" placeholder="Lab RPL 1" /></div>
           <div class="field"><label>Kapasitas per slot</label><input class="input" type="number" name="kapasitas" value="1" min="1" max="50" /></div></div>
+        <div class="field"><span class="label">Penguji untuk semua slot ini${modeBanyak() ? ' <span class="muted">(bisa lebih dari satu)</span>' : ''}</span><div data-pj></div></div>
         <div class="callout info small" data-prev>${icon('info')}<span></span></div>
       </form>`,
       footer: '<button class="btn ghost" data-close>Batal</button><button class="btn primary" data-save>Buat slot</button>',
     });
     const fg = $('#fg', md.el);
+    const pjSiap = pemilihPenguji($('[data-pj]', md.el), [{ id: state.profile.id, nama: state.profile.nama }]);
     $$('[data-h]', fg).forEach((b) => b.addEventListener('click', () => { b.classList.toggle('on'); prev(); }));
     const compute = () => {
       const f = Object.fromEntries(new FormData(fg));
@@ -397,7 +441,8 @@ export async function jadwal(view, ctx) {
     const prev = () => { const n = compute(); $('[data-prev] span', fg).textContent = n.length ? `Akan dibuat ${n.length} slot.` : 'Tidak ada slot yang terbentuk. Periksa tanggal, hari, dan jam.'; };
     fg.addEventListener('input', prev); prev();
     $('[data-save]', md.el).addEventListener('click', (e) => withBusy(e.currentTarget, async () => {
-      const rows = compute();
+      const pj = (await pjSiap).get();
+      const rows = compute().map((r) => ({ ...r, penguji: pj }));
       if (!rows.length) return toast('Tidak ada slot untuk dibuat.', 'err');
       const { error } = await sb.from('slots').insert(rows);
       if (error) return toast(errMsg(error), 'err');

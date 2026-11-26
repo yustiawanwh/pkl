@@ -3,6 +3,7 @@ import { sb, state, profilLengkap, getKKM, kkmCls } from '../lib/supa.js';
 import { $, $$, esc, icon, modal, fmtTanggal, fmtJam, fmtWaktu, today, badge, emptyState, initials, STATUS } from '../lib/ui.js';
 import { INDIKATOR_A, fmtNilai } from '../lib/rubrik.js';
 import { NAMA_SEKOLAH } from '../config.js';
+import { teksPenguji } from '../lib/penguji.js';
 
 // Tahapan progres, berurutan dari awal sampai akhir
 export const TAHAP = [
@@ -66,7 +67,7 @@ export async function riwayat(view) {
       <button class="btn primary" data-print-all>${icon('download')} Cetak laporan</button></div>
     <div class="filters">
       <select class="select" data-kelas aria-label="Filter kelas"><option value="">Semua kelas</option>${kelas.map((k) => `<option>${esc(k)}</option>`).join('')}</select>
-      <input class="input" type="search" placeholder="Cari nama atau NIS" data-q aria-label="Cari murid" />
+      <input class="input" type="search" placeholder="Cari nama, NIS, atau penguji" data-q aria-label="Cari murid" />
     </div>
     <section class="card stack" data-overview></section>
     <div data-list class="mt-lg"></div>`;
@@ -74,7 +75,7 @@ export async function riwayat(view) {
   const filtered = (ignoreTahap = false) => {
     const q = f.q.toLowerCase();
     return rows.filter((r) => (!f.kelas || r.kelas === f.kelas) && (ignoreTahap || !f.tahap || r.tahap === f.tahap)
-      && (!q || `${r.nama} ${r.nis}`.toLowerCase().includes(q)));
+      && (!q || `${r.nama} ${r.nis} ${teksPenguji(r.terakhir?.penguji)}`.toLowerCase().includes(q)));
   };
 
   const draw = () => {
@@ -113,7 +114,7 @@ export async function riwayat(view) {
       ${rs.map((r) => `<tr class="click" data-id="${r.id}" tabindex="0">
         <td><div class="who"><b>${esc(r.nama)}</b><span>${esc(r.kelas || '-')}, NIS ${esc(r.nis || '-')}</span></div></td>
         <td><div class="who"><b class="fw-500">${esc(r.judul || '-')}</b><span>${esc(r.dudi || '-')}</span></div></td>
-        <td class="nowrap">${r.terakhir?.tanggal ? `${esc(tglPendek(r.terakhir.tanggal))}<div class="small muted">${fmtJam(r.terakhir.jam_mulai)} WIB</div>` : '<span class="muted">-</span>'}</td>
+        <td>${r.terakhir?.tanggal ? `<span class="nowrap">${esc(tglPendek(r.terakhir.tanggal))}</span><div class="small muted">${fmtJam(r.terakhir.jam_mulai)} WIB</div>${teksPenguji(r.terakhir.penguji) ? `<div class="small muted">Penguji: ${esc(teksPenguji(r.terakhir.penguji))}</div>` : ''}` : '<span class="muted">-</span>'}</td>
         <td class="num">${r.percobaan || '-'}</td>
         <td>${tahapBadge(r.tahap)}</td>
         <td class="num nowrap">${r.nilai ? `<b class="${kkmCls(r.nilai.hasil.total)}">${fmtNilai(r.nilai.hasil.total)}</b><div class="small muted">${esc(r.nilai.hasil.predikat)}</div>` : '<span class="muted">-</span>'}</td>
@@ -146,6 +147,7 @@ function detailMurid(r, guru) {
           <span>${icon('calendar')}${p.tanggal ? esc(fmtTanggal(p.tanggal, false)) : '-'}</span>
           <span>${icon('clock')}${fmtJam(p.jam_mulai)}–${fmtJam(p.jam_selesai)}</span>
           ${p.ruang ? `<span>${icon('pin')}${esc(p.ruang)}</span>` : ''}
+          ${teksPenguji(p.penguji) ? `<span>${icon('user')}Penguji: ${esc(teksPenguji(p.penguji))}</span>` : ''}
         </div>
         <p class="small muted">Diajukan ${esc(fmtWaktu(p.created_at))}${p.diverifikasi_at ? `, diverifikasi ${esc(guru[p.diverifikasi_oleh] || 'guru')} ${esc(fmtWaktu(p.diverifikasi_at))}` : ''}</p>
         ${p.feedback ? `<p class="small"><b>Feedback:</b> ${esc(p.feedback)}</p>` : ''}
@@ -204,14 +206,17 @@ const kop = (judul, sub) => `
   <p class="rp-sub">${sub}</p>`;
 
 // Tanda tangan: nama di atas garis. Kolom Kepala Program hanya bila diaktifkan di Pengaturan.
-const ttd = () => {
+// penguji: daftar [{id, nama}] penguji yang ditetapkan; kosong = guru yang mencetak.
+const ttd = (penguji = []) => {
   const kp = state.settings.ttd_kaprog || {};
   const kota = NAMA_SEKOLAH.replace(/^SMK\s*/i, '').split(' ').slice(-1)[0] || '';
-  const blok = (atas, nama) => `<div class="rp-ttd-blok"><p>${atas}</p><div class="rp-sign"></div>
+  const blok = (atas, nama, cls = '') => `<div class="rp-ttd-blok ${cls}"><p>${atas}</p><div class="rp-sign"></div>
     <p class="rp-name">${nama ? esc(nama) : '&nbsp;'}</p></div>`;
-  return `<section class="rp-ttd ${kp.tampil ? '' : 'single'}">
-    ${kp.tampil ? blok('Mengetahui,<br>Kepala Program Keahlian', kp.nama) : ''}
-    ${blok(`${esc(kota)}, ${esc(fmtTanggal(today(), false))}<br>Guru Penguji`, state.profile.nama)}
+  const pj = penguji.length ? penguji : [{ id: state.profile.id, nama: state.profile.nama }];
+  const tgl = `${esc(kota)}, ${esc(fmtTanggal(today(), false))}`;
+  return `<section class="rp-ttd">
+    ${kp.tampil ? blok('Mengetahui,<br>Kepala Program Keahlian', kp.nama, 'kp') : ''}
+    ${pj.map((x, i) => blok(`${i === 0 ? tgl : '&nbsp;'}<br>${x.id ? 'Guru Penguji' : 'Penguji'}${pj.length > 1 ? ` ${i + 1}` : ''}`, x.nama)).join('')}
   </section>`;
 };
 
@@ -244,16 +249,17 @@ function cetakKelas(rs, f) {
     </section>
     <table class="rp-table">
       <thead><tr><th class="n">No</th><th>Nama murid</th><th>NIS</th><th class="nw">Kelas</th><th>Tempat PKL</th><th>Judul project</th>
-        <th>Presentasi terakhir</th><th class="n">Perc.</th><th>Tahap</th><th class="n">A</th><th class="n">B</th><th class="n">Nilai</th><th>Predikat</th></tr></thead>
+        <th>Presentasi terakhir</th><th>Penguji</th><th class="n">Perc.</th><th>Tahap</th><th class="n">A</th><th class="n">B</th><th class="n">Nilai</th><th>Predikat</th></tr></thead>
       <tbody>${rs.map((r, i) => {
         const h = r.nilai?.hasil;
         return `<tr><td class="n">${i + 1}</td><td>${esc(r.nama)}</td><td class="nw">${esc(r.nis || '')}</td><td class="nw">${esc(r.kelas || '')}</td>
           <td>${esc(r.dudi || '-')}</td><td>${esc(r.judul || '-')}</td>
           <td>${r.terakhir?.tanggal ? `${esc(fmtTanggal(r.terakhir.tanggal, false))}, ${fmtJam(r.terakhir.jam_mulai)}` : '-'}</td>
+          <td>${esc(teksPenguji(r.terakhir?.penguji, '-'))}</td>
           <td class="n">${r.percobaan || '-'}</td><td>${esc(TAHAP_MAP[r.tahap].label)}</td>
           <td class="n">${h ? fmtNilai(h.nilai_a) : '-'}</td><td class="n">${h ? fmtNilai(h.nilai_b) : '-'}</td>
           <td class="n"><b class="${h ? kkmCls(h.total) : ''}">${h ? fmtNilai(h.total) : '-'}</b></td><td>${h ? esc(h.predikat) : '-'}</td></tr>`;
-      }).join('') || '<tr><td colspan="13">Tidak ada data.</td></tr>'}</tbody>
+      }).join('') || '<tr><td colspan="14">Tidak ada data.</td></tr>'}</tbody>
     </table>
     <p class="rp-note">KKM ${getKKM()}; nilai akhir di bawah KKM dicetak merah. Nilai akhir = Komponen A (kualitas presentasi dan pemahaman, maks. 70) + Komponen B (tingkat tantangan pekerjaan, maks. 30). Nilai yang ditampilkan adalah hasil terbaru yang sudah dipublikasikan.</p>
     ${ttd()}
@@ -278,18 +284,19 @@ function cetakMurid(r, guru) {
 
     <h2 class="rp-h2">Riwayat pengajuan dan presentasi</h2>
     <table class="rp-table">
-      <thead><tr><th class="n">No</th><th>Diajukan</th><th>Jadwal presentasi</th><th>Status</th><th>Diverifikasi oleh</th><th>Feedback verifikasi</th><th class="n">Nilai</th><th>Predikat</th></tr></thead>
+      <thead><tr><th class="n">No</th><th>Diajukan</th><th>Jadwal presentasi</th><th>Penguji</th><th>Status</th><th>Diverifikasi oleh</th><th>Feedback verifikasi</th><th class="n">Nilai</th><th>Predikat</th></tr></thead>
       <tbody>${r.list.slice().reverse().map((p, i) => {
         const hh = p.hasil?.dipublikasi ? p.hasil : null;
         return `<tr><td class="n">${i + 1}</td><td>${esc(fmtWaktu(p.created_at))}</td>
           <td>${p.tanggal ? `${esc(fmtTanggal(p.tanggal, false))}, ${fmtJam(p.jam_mulai)}–${fmtJam(p.jam_selesai)}${p.ruang ? `, ${esc(p.ruang)}` : ''}` : '-'}</td>
+          <td>${esc(teksPenguji(p.penguji, '-'))}</td>
           <td>${esc(STATUS[p.status] || p.status)}</td><td>${esc(guru[p.diverifikasi_oleh] || '-')}</td><td>${esc(p.feedback || '-')}</td>
           <td class="n ${hh ? kkmCls(hh.total) : ''}">${hh ? fmtNilai(hh.total) : '-'}</td><td>${hh ? esc(hh.predikat) : '-'}</td></tr>`;
-      }).join('') || '<tr><td colspan="8">Belum ada pengajuan.</td></tr>'}</tbody>
+      }).join('') || '<tr><td colspan="9">Belum ada pengajuan.</td></tr>'}</tbody>
     </table>
 
     ${h ? `
-    <h2 class="rp-h2">Rincian nilai terakhir (${esc(fmtTanggal(terakhirDinilai.tanggal, false))})</h2>
+    <h2 class="rp-h2">Rincian nilai terakhir (${esc(fmtTanggal(terakhirDinilai.tanggal, false))}${teksPenguji(terakhirDinilai.penguji) ? `, penguji ${esc(teksPenguji(terakhirDinilai.penguji))}` : ''})</h2>
     <section class="rp-two">
       <table class="rp-table rp-compact"><thead><tr><th>Komponen A: kualitas presentasi</th><th class="n">Nilai</th><th class="n">Maks</th></tr></thead><tbody>
         ${INDIKATOR_A.map((i) => `<tr><td>${esc(i.judul)}</td><td class="n">${fmtNilai(avgA(terakhirDinilai, i.key))}</td><td class="n">${i.bobot}</td></tr>`).join('')}
@@ -307,7 +314,7 @@ function cetakMurid(r, guru) {
       ${[['Evaluasi dan feedback', h.evaluasi], ['Saran', h.saran], ['Kritik', h.kritik], ['Catatan', h.catatan], ['Informasi remidi', h.remidi ? h.info_remidi : null]]
         .filter(([, v]) => v).map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join('') || '<tr><td colspan="2">Tidak ada catatan.</td></tr>'}
     </table>` : '<p class="rp-note">Belum ada hasil penilaian yang dipublikasikan.</p>'}
-    ${ttd()}
+    ${ttd((terakhirDinilai || r.terakhir)?.penguji || [])}
   </div>`;
   cetak(html, { judulFile: `Riwayat_PKL_${String(r.nama).replace(/\W+/g, '_')}_${tglFile()}` });
 }

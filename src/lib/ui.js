@@ -150,6 +150,8 @@ export function ticket(p, { extra = '' } = {}) {
         <span>${icon('calendar')}${d ? esc(fmtTanggal(p.tanggal)) : 'Belum dijadwalkan'}</span>
         <span>${icon('clock')}${esc(fmtJam(p.jam_mulai))}–${esc(fmtJam(p.jam_selesai))} WIB</span>
         ${p.ruang ? `<span>${icon('pin')}${esc(p.ruang)}</span>` : ''}
+        ${Array.isArray(p.penguji) && ['menunggu', 'disetujui', 'selesai', 'remidi'].includes(p.status)
+          ? `<span title="Penguji">${icon('user')}${p.penguji.length ? `Penguji: ${esc(p.penguji.map((x) => x.nama).join(', '))}` : 'Penguji belum ditentukan'}</span>` : ''}
       </div>
       ${extra}
     </div>
@@ -172,7 +174,7 @@ export function slotCard(s, { tag = 'button', cls = '', attrs = '', aside = '', 
   const meta = [
     showDate && `<span>${icon('calendar')}${esc(fmtTanggal(s.tanggal, false))}</span>`,
     `<span>${icon('pin')}${esc(s.ruang || 'Ruang belum diisi')}</span>`,
-    s.guru_nama && `<span>${icon('user')}${esc(s.guru_nama)}</span>`,
+    (s.penguji || []).length && `<span title="Penguji">${icon('user')}${esc(s.penguji.map((x) => x.nama).join(', '))}</span>`,
     s.catatan && `<span>${icon('info')}${esc(s.catatan)}</span>`,
   ].filter(Boolean).join('');
   return `<${tag} class="slot ${cls}" ${tag === 'button' ? 'type="button"' : ''} ${attrs}>

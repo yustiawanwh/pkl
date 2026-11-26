@@ -46,6 +46,7 @@ const URUT = [
   ['tgl_pengajuan', 'Tanggal pengajuan', (r) => r.tgl_pengajuan],
   ['tgl_daftar', 'Tanggal daftar', (r) => r.tgl_daftar],
   ['nilai', 'Nilai akhir', (r) => (r.nilai == null ? null : Number(r.nilai))],
+  ['penguji', 'Nama penguji', (r) => (r.status && r.penguji?.length ? r.penguji.join(', ').toLocaleLowerCase('id') : null)],
   ['tahap', 'Tahap', (r) => URUTAN_TAHAP[r.tahap]],
 ];
 const URUT_MAP = Object.fromEntries(URUT.map(([k, l, f]) => [k, { label: l, fn: f }]));
@@ -126,7 +127,7 @@ export async function rekapPublik(app) {
       <div class="pub-groups" role="group" aria-label="Kelompok murid" data-groups></div>
       <div class="filters pub-filters">
         <select class="select" data-kelas aria-label="Filter kelas"><option value="">Semua kelas</option>${kelasList.map((k) => `<option ${k === f.kelas ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>
-        <input class="input" type="search" data-cari placeholder="Cari nama, DUDI, atau judul" aria-label="Cari" maxlength="80" />
+        <input class="input" type="search" data-cari placeholder="Cari nama, DUDI, judul, atau penguji" aria-label="Cari" maxlength="80" />
         <div class="pub-sort">
           <label for="pub-urut" class="small muted">Urutkan</label>
           <select class="select" id="pub-urut" data-urut>${URUT.map(([k, l]) => `<option value="${k}" ${k === f.urut ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -142,7 +143,7 @@ export async function rekapPublik(app) {
   const cocokCari = (r) => {
     if (!f.cari) return true;
     const q = f.cari.toLocaleLowerCase('id');
-    return [r.nama, r.dudi, r.judul].some((v) => v && v.toLocaleLowerCase('id').includes(q));
+    return [r.nama, r.dudi, r.judul, ...(r.penguji || [])].some((v) => v && v.toLocaleLowerCase('id').includes(q));
   };
 
   const drawOverview = () => {
@@ -200,12 +201,12 @@ export async function rekapPublik(app) {
     }
     const tampilJadwal = (r) => r.status && ['disetujui', 'selesai', 'remidi'].includes(r.status) && r.tgl_presentasi;
     $('[data-list]', body).innerHTML = `<div class="table-wrap"><table class="t pub-table">
-      <thead><tr><th>Murid</th><th>DUDI dan judul</th><th>Diajukan</th><th>Presentasi</th><th>Tahap</th><th class="num">Nilai</th></tr></thead>
+      <thead><tr><th>Murid</th><th>DUDI dan judul</th><th>Diajukan</th><th>Presentasi dan penguji</th><th>Tahap</th><th class="num">Nilai</th></tr></thead>
       <tbody>${sel.map((r) => `<tr>
         <td><div><b>${esc(r.nama)}</b><div class="small muted">${esc(r.kelas || 'Kelas belum diisi')}</div></div></td>
         <td><div>${r.dudi ? esc(r.dudi) : '<span class="muted">Belum diisi</span>'}${r.judul ? `<div class="small muted clamp-2">${esc(r.judul)}</div>` : ''}</div></td>
         <td><div>${r.status && r.tgl_pengajuan ? esc(tgl(r.tgl_pengajuan)) : '<span class="muted">-</span>'}</div></td>
-        <td><div>${tampilJadwal(r) ? `${esc(tgl(r.tgl_presentasi))}<div class="small muted">${esc([r.jam, r.ruang].filter(Boolean).join(', '))}</div>` : '<span class="muted">-</span>'}</div></td>
+        <td><div>${tampilJadwal(r) ? `${esc(tgl(r.tgl_presentasi))}<div class="small muted">${esc([r.jam, r.ruang].filter(Boolean).join(', '))}</div>` : '<span class="muted">-</span>'}${r.status && r.penguji?.length ? `<div class="small pub-pj">${icon('user')}${esc(r.penguji.join(', '))}</div>` : ''}</div></td>
         <td><div><span class="badge plain tahap" style="--c:${TAHAP_MAP[r.tahap].color}"><i></i>${esc(TAHAP_MAP[r.tahap].label)}</span>${r.presentasi > 1 ? `<div class="small muted">${r.presentasi}× presentasi</div>` : ''}</div></td>
         <td class="num"><div>${r.nilai != null ? `<b class="${kkmCls(r.nilai)}">${fmtNilai(r.nilai)}</b><div class="small muted">Predikat ${esc(huruf(r.predikat))}</div>` : '<span class="muted">-</span>'}</div></td>
       </tr>`).join('')}</tbody></table></div>`;

@@ -4,7 +4,8 @@ import {
   INDIKATOR_A, KOMPLEKSITAS, PORSI, KESELARASAN, ATURAN_B, PERTANYAAN_PEMANDU, sumA, lengkapA, predikat, levelOf, fmtNilai,
 } from '../lib/rubrik.js';
 import { daftarBerkas } from './murid.js';
-import { notFound, jadwalkanRemidi } from './guru.js';
+import { notFound, jadwalkanRemidi, gantiPenguji } from './guru.js';
+import { teksPenguji } from '../lib/penguji.js';
 import { NAMA_SEKOLAH } from '../config.js';
 
 const SEL = '*, murid:profiles!pengajuan_murid_id_fkey(id, nama, nis, kelas, dudi, kompleksitas, porsi), hasil(*), penilaian(*)';
@@ -27,13 +28,13 @@ export async function daftarPenilaian(view) {
       <div class="seg">${[['belum', 'Belum dipublikasi'], ['sudah', 'Sudah dipublikasi'], ['', 'Semua']].map(([k, l]) => `<button data-tab="${k}" class="${k === f.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
       <span class="spacer"></span>
       <select class="select" data-kelas><option value="">Semua kelas</option>${kelas.map((k) => `<option>${esc(k)}</option>`).join('')}</select>
-      <input class="input" type="search" placeholder="Cari nama atau judul" data-q />
+      <input class="input" type="search" placeholder="Cari nama, judul, penguji" data-q />
     </div><div data-list></div>`;
 
   const draw = () => {
     const q = f.q.toLowerCase();
     const rows = all.filter((r) => (f.tab === '' || (f.tab === 'sudah' ? r.hasil?.dipublikasi : !r.hasil?.dipublikasi))
-      && (!f.kelas || r.murid?.kelas === f.kelas) && (!q || `${r.murid?.nama} ${r.judul}`.toLowerCase().includes(q)));
+      && (!f.kelas || r.murid?.kelas === f.kelas) && (!q || `${r.murid?.nama} ${r.judul} ${teksPenguji(r.penguji)}`.toLowerCase().includes(q)));
     $('[data-list]', view).innerHTML = rows.length ? `<div class="table-wrap"><table class="t">
       <thead><tr><th>Jadwal</th><th>Murid</th><th>Penguji</th><th class="num">Nilai</th><th>Status</th><th></th></tr></thead><tbody>
       ${rows.map((r) => {
@@ -42,7 +43,8 @@ export async function daftarPenilaian(view) {
         return `<tr class="click" data-id="${r.id}" tabindex="0">
           <td>${r.tanggal === t ? '<b>Hari ini</b>' : esc(fmtTanggal(r.tanggal, false))}<div class="small muted">${fmtJam(r.jam_mulai)} ${esc(r.ruang || '')}</div></td>
           <td><div class="who"><b>${esc(r.murid?.nama)}</b><span>${esc(r.murid?.kelas)} · ${esc(r.judul)}</span></div></td>
-          <td class="small">${r.penilaian.length} penguji${mine ? ' (termasuk Anda)' : ''}</td>
+          <td class="small">${teksPenguji(r.penguji) ? `<b style="font-weight:600">${esc(teksPenguji(r.penguji))}</b>` : '<span class="muted">Belum ditentukan</span>'}
+            <div class="small muted">${r.penilaian.length ? `${r.penilaian.length} guru sudah mengisi${mine ? ', termasuk Anda' : ''}` : 'Belum ada nilai'}</div></td>
           <td class="num"><b class="${kkmCls(r.hasil?.total)}">${fmtNilai(r.hasil?.total)}</b>${r.hasil?.predikat ? `<div class="small muted">${esc(r.hasil.predikat)}</div>` : ''}</td>
           <td>${st}</td><td class="num">${icon('chevr')}</td></tr>`;
       }).join('')}</tbody></table></div>`
@@ -92,7 +94,8 @@ export async function formNilai(view, ctx) {
   view.innerHTML = `
     <div class="page-head"><div><a href="#/guru/penilaian" class="back">${icon('chevl')} Daftar penilaian</a>
       <h1>${esc(m.nama)}</h1>
-      <p>${esc(m.kelas)} · ${esc(m.dudi)} · ${esc(fmtTanggal(r.tanggal))}, ${fmtJam(r.jam_mulai)}${r.percobaan > 1 ? ` · percobaan ke-${r.percobaan}` : ''}</p></div>
+      <p>${esc(m.kelas)} · ${esc(m.dudi)} · ${esc(fmtTanggal(r.tanggal))}, ${fmtJam(r.jam_mulai)}${r.percobaan > 1 ? ` · percobaan ke-${r.percobaan}` : ''}</p>
+      <p class="pj-head">${icon('user')}<span>Penguji: <b>${esc(teksPenguji(r.penguji, 'belum ditentukan'))}</b></span><button type="button" class="btn sm ghost" data-ganti-pj>Ganti</button></p></div>
       <div class="row">${badge(r.status)}<span class="badge plain">${mode === 'banyak' ? 'Mode beberapa penguji' : 'Mode penguji tunggal'}</span>
         ${r.status === 'remidi' ? `<button type="button" class="btn sm primary" data-remidi>${icon('calendar')} Jadwalkan remidi</button>` : ''}</div></div>
 
@@ -160,6 +163,7 @@ export async function formNilai(view, ctx) {
     </form>`;
 
   $('[data-remidi]', view)?.addEventListener('click', () => jadwalkanRemidi(r, ctx));
+  $('[data-ganti-pj]', view)?.addEventListener('click', () => gantiPenguji(r, () => ctx.go(`#/guru/nilai/${id}`)));
   const form = $('[data-form]', view);
   const num = (n) => { const v = form[n]?.value; return v === '' || v == null ? null : Number(v); };
   const readA = () => Object.fromEntries(INDIKATOR_A.map((i) => [i.key, num(i.key)]));
@@ -281,7 +285,7 @@ export async function formNilai(view, ctx) {
 export async function rekap(view) {
   const [{ data: murid, error }, { data: aj, error: e2 }] = await Promise.all([
     sb.from('profiles').select('id, nama, nis, kelas, dudi, judul').eq('role', 'murid').order('kelas').order('nama'),
-    sb.from('pengajuan').select('id, murid_id, status, tanggal, percobaan, judul, created_at, hasil(*), penilaian(*)').in('status', ['disetujui', 'selesai', 'remidi']).order('created_at', { ascending: false }),
+    sb.from('pengajuan').select('id, murid_id, status, tanggal, percobaan, judul, penguji, created_at, hasil(*), penilaian(*)').in('status', ['disetujui', 'selesai', 'remidi']).order('created_at', { ascending: false }),
   ]);
   if (error || e2) throw error || e2;
   const latest = {};
@@ -292,7 +296,7 @@ export async function rekap(view) {
     const pen = p?.penilaian || [];
     const rataA = Object.fromEntries(INDIKATOR_A.map((i) => [i.key, pen.length ? Math.round((pen.reduce((s, x) => s + (x[i.key] || 0), 0) / pen.length) * 100) / 100 : null]));
     return {
-      ...m, judul: p?.judul || m.judul, tanggal: p?.tanggal, percobaan: p?.percobaan, status: p?.status,
+      ...m, judul: p?.judul || m.judul, tanggal: p?.tanggal, percobaan: p?.percobaan, status: p?.status, penguji: teksPenguji(p?.penguji),
       ...h, rataA,
       nilai_a: h.nilai_a != null ? Number(h.nilai_a) : null, nilai_b: h.nilai_b != null ? Number(h.nilai_b) : null, total: h.total != null ? Number(h.total) : null,
       catatan_rekap: h.remidi ? `Remidi: ${h.info_remidi || ''}` : h.catatan || '',
@@ -327,10 +331,11 @@ export async function rekap(view) {
       <div class="meter" style="height:14px;margin-top:12px">${dist.map((n, i) => n ? `<i style="width:${(n / dinilai.length) * 100}%;background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}" title="${['A', 'B', 'C', 'D'][i]}: ${n}"></i>` : '').join('')}</div>
       <div class="cal-legend">${['A (90–100)', 'B (80–89)', 'C (70–79)', 'D (<70)'].map((l, i) => `<span><i style="background:${['var(--mint)', 'var(--primary)', 'var(--marigold)', 'var(--rose)'][i]}"></i>${l}: ${dist[i]}</span>`).join('')}</div></div>` : ''}`;
     $('[data-list]', view).innerHTML = rs.length ? `<div class="table-wrap"><table class="t">
-      <thead><tr><th>Murid</th><th>DUDI</th><th class="num">Nilai A</th><th class="num">Nilai B</th><th class="num">Nilai akhir</th><th>Predikat</th><th></th></tr></thead><tbody>
+      <thead><tr><th>Murid</th><th>DUDI</th><th>Penguji</th><th class="num">Nilai A</th><th class="num">Nilai B</th><th class="num">Nilai akhir</th><th>Predikat</th><th></th></tr></thead><tbody>
       ${rs.map((r) => `<tr>
         <td><div class="who"><b>${esc(r.nama)}</b><span>${esc(r.kelas || '')} · NIS ${esc(r.nis || '')}</span></div></td>
         <td class="small">${esc(r.dudi || '-')}</td>
+        <td class="small">${r.penguji ? esc(r.penguji) : '<span class="muted">-</span>'}</td>
         <td class="num">${fmtNilai(r.nilai_a)}</td><td class="num">${fmtNilai(r.nilai_b)}</td>
         <td class="num"><b class="${kkmCls(r.total)}">${fmtNilai(r.total)}</b></td>
         <td>${r.predikat ? esc(r.predikat) : '<span class="muted small">Belum dinilai</span>'}${r.remidi ? ' <span class="badge remidi">Remidi</span>' : ''}</td>

@@ -49,8 +49,8 @@ export async function pengaturan(view, ctx) {
       <section class="card stack">
         <div><h2>Mode penguji</h2><p class="muted small" style="margin-top:4px">Menentukan siapa yang mengisi Komponen A pada setiap presentasi.</p></div>
         <div class="grid-2">
-          ${[['tunggal', 'Penguji tunggal', 'Satu guru mengisi seluruh rubrik. Nilai A langsung dari guru tersebut.'],
-            ['banyak', 'Beberapa penguji', 'Setiap guru penguji mengisi Komponen A sendiri. Nilai A adalah rata-rata semua penguji; Komponen B dan evaluasi diisi bersama.']]
+          ${[['tunggal', 'Penguji tunggal', 'Satu guru mengisi seluruh rubrik. Nilai A langsung dari guru tersebut. Setiap slot dan murid punya satu penguji.'],
+            ['banyak', 'Beberapa penguji', 'Setiap guru penguji mengisi Komponen A sendiri. Nilai A adalah rata-rata semua penguji; Komponen B dan evaluasi diisi bersama. Setiap slot dan murid bisa punya hingga 5 penguji.']]
             .map(([k, t, d]) => `<label class="slot ${mode === k ? 'on' : ''}" style="align-items:flex-start;cursor:pointer">
               <input type="radio" name="mode" value="${k}" ${mode === k ? 'checked' : ''} style="margin-top:4px" />
               <span class="info"><b style="color:var(--ink);font-size:15px">${t}</b><br>${d}</span></label>`).join('')}

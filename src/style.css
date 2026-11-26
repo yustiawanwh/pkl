@@ -717,8 +717,9 @@ dl.kv dd { margin: 0; font-weight: 500; }
   .rp-final { margin-top: 8px; border: 1.5px solid #2F5BEA; border-radius: 8px; padding: 8px 12px; display: flex; align-items: baseline; gap: 10px; }
   .rp-final b { font-family: 'Bricolage Grotesque', Arial, sans-serif; font-size: 20pt; color: #2F5BEA; }
   .rp-note { font-size: 8pt; color: #555; margin-top: 8px; }
-  .rp-ttd { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 22px; break-inside: avoid; text-align: center; }
-  .rp-ttd.single .rp-ttd-blok { grid-column: 2; }
+  .rp-ttd { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 18px 32px; margin-top: 22px; break-inside: avoid; text-align: center; }
+  .rp-ttd-blok { flex: 0 0 30%; }
+  .rp-ttd-blok.kp { margin-right: auto; }
   .rp-sign { height: 58px; }
   .rp-name { display: inline-block; min-width: 62%; padding: 0 10px 2px; border-bottom: 0.8pt solid #333; font-weight: 700; }
 }
@@ -874,3 +875,30 @@ a.loading { opacity: .6; pointer-events: none; cursor: progress; }
 .board-link svg.i { color: #5BD6A8; width: 18px; height: 18px; }
 .board-link:hover { background: rgba(255,255,255,.12); }
 .board-link:focus-visible { outline: 2px solid #5BD6A8; outline-offset: 2px; }
+
+/* =====================================================================
+   v1.13 Penguji yang ditetapkan
+   ===================================================================== */
+.pj { display: grid; gap: var(--s2); }
+.pj-chips { display: flex; flex-wrap: wrap; gap: var(--s2); min-height: 32px; align-items: center; }
+.pj-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-weight: 600; font-size: 13.5px; }
+.pj-chip svg.i { width: 15px; height: 15px; }
+.pj-chip small { font-weight: 500; opacity: .8; }
+.pj-chip.tamu { background: var(--surface-2); color: var(--ink); border: 1px dashed var(--line); }
+.pj-chip button { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.pj-chip button:hover { background: rgba(0,0,0,.08); }
+.pj-chip button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.pj-chip button svg.i { width: 14px; height: 14px; }
+.pj-add { display: grid; gap: var(--s2); }
+.pj-lain { display: grid; grid-template-columns: 1fr auto; gap: var(--s2); }
+.pj-lain[hidden] { display: none; }
+.pj-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.pj-list li { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
+.pj-list li svg.i { color: var(--ink-3); width: 16px; height: 16px; }
+.pj-head { display: flex; align-items: center; gap: var(--s2); margin-top: 6px; flex-wrap: wrap; }
+.pj-head svg.i { width: 16px; height: 16px; color: var(--ink-3); }
+.booking-pj, .pub-pj, .penguji-line { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); font-size: 12.5px; }
+.booking-pj svg.i, .pub-pj svg.i, .penguji-line svg.i { width: 13px; height: 13px; }
+.booking-pj { margin-left: auto; color: var(--marigold-ink, var(--ink-2)); font-weight: 600; }
+.pub-pj { margin-top: 4px; color: var(--ink-2); }
+.pub-pj { align-items: flex-start; } .pub-pj svg.i { margin-top: 2px; flex: none; }

@@ -299,7 +299,7 @@ async function kartuHariIni(el) {
     <div class="card-head"><div><h2>Presentasi hari ini</h2><p>${esc(fmtTanggal(today()))}</p></div><span class="badge plain disetujui">${list.length} murid</span></div>
     <div class="list">${list.map((x) => `<div class="list-item static">
       <span class="time-chip ${x.sudah ? 'done' : ''}"><b>${esc(x.jam_mulai)}</b><span>${esc(x.jam_selesai)}</span></span>
-      <span class="li-main"><span class="li-name"><b>${esc(x.nama)}</b>${x.nama === me ? '<span class="badge plain disetujui">Kamu</span>' : ''}</span><span>${esc(x.kelas || '')}</span></span>
+      <span class="li-main"><span class="li-name"><b>${esc(x.nama)}</b>${x.nama === me ? '<span class="badge plain disetujui">Kamu</span>' : ''}</span><span>${esc([x.kelas, x.penguji && `Penguji: ${x.penguji}`].filter(Boolean).join(', '))}</span></span>
       <span class="li-aside"><span>${esc(x.ruang || '-')}</span>${x.sudah ? '<span class="badge selesai">Sudah presentasi</span>' : ''}</span></div>`).join('')}</div>
   </div>`;
 }
@@ -471,7 +471,7 @@ function kartuHasil(r) {
   const avg = (k) => (pen.length ? pen.reduce((s, x) => s + (Number(x[k]) || 0), 0) / pen.length : null);
   const blok = (label, val) => (val ? `<div class="stack" style="gap:4px"><span class="label">${label}</span><p style="white-space:pre-wrap">${esc(val)}</p></div>` : '');
   return `<article class="card stack-lg">
-    <div class="card-title-row"><div><h2>${esc(r.judul)}</h2><p class="muted small mt-xs">Presentasi ${esc(fmtTanggal(r.tanggal))}, percobaan ke-${r.percobaan}</p></div>${badge(r.status)}</div>
+    <div class="card-title-row"><div><h2>${esc(r.judul)}</h2><p class="muted small mt-xs">Presentasi ${esc(fmtTanggal(r.tanggal))}, percobaan ke-${r.percobaan}${r.penguji?.length ? `. Penguji: ${esc(r.penguji.map((x) => x.nama).join(', '))}` : ''}</p></div>${badge(r.status)}</div>
     ${h.remidi ? `<div class="callout bad">${icon('alert')}<div><b>Kamu perlu remidi.</b> ${esc(h.info_remidi || '')}<div style="margin-top:8px"><a class="btn sm danger" href="#/murid/pengajuan">${icon('calendar')} Jadwalkan ulang</a></div></div></div>` : ''}
     <div class="cols result">
       <div class="stack">
