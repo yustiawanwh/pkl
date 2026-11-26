@@ -132,5 +132,6 @@ async function muatPapan(el) {
       ${d.hari_ini.length ? `<ul>${d.hari_ini.map((x) => `<li><span class="bt-time">${esc(x.jam_mulai)}–${esc(x.jam_selesai)}</span><span>${esc(x.ruang || 'Ruang belum diisi')}</span><span class="board-muted">${x.jumlah} murid</span></li>`).join('')}</ul>`
         : '<p class="board-muted">Tidak ada presentasi hari ini.</p>'}
     </div>
+    ${state.settings.rekap_publik?.aktif !== false ? `<a class="board-link" href="#/rekap">${icon('chart')}<span>Lihat rekap presentasi semua murid</span></a>` : ''}
     <p class="board-foot">${d.slot_kosong ? `${icon('calendar')}<span>Masih ada <b>${d.slot_kosong} tempat kosong</b>, mulai ${esc(fmtTanggal(d.slot_berikutnya, false))}.</span>` : `${icon('calendar')}<span>Belum ada slot jadwal yang dibuka.</span>`}</p>`;
 }

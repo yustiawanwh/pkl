@@ -824,3 +824,53 @@ a.loading { opacity: .6; pointer-events: none; cursor: progress; }
   .rp-final.below-kkm { border-color: #D98A94; background: #FDF1F2; }
   .rp-final.below-kkm b { color: #B23A48; }
 }
+
+/* =====================================================================
+   v1.12 Rekap publik (#/rekap): halaman mandiri tanpa menu
+   ===================================================================== */
+.pub { max-width: 1180px; margin: 0 auto; padding: var(--s5) var(--s5) var(--s6); display: grid; gap: var(--s5); min-height: 100vh; align-content: start; }
+.pub-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
+.pub-brand { display: flex; align-items: center; gap: var(--s3); }
+.pub-brand .logo { width: 42px; height: 42px; border-radius: 12px; }
+.pub-brand h1 { font-size: 22px; line-height: 1.15; }
+.pub-brand p { color: var(--ink-3); font-size: 13.5px; margin-top: 2px; }
+.pub-main { display: grid; gap: var(--s4); align-content: start; }
+.pub-stats { grid-template-columns: repeat(4, auto); }
+.tahap-chip.static { cursor: default; }
+.tahap-chip.static:hover { border-color: var(--line); }
+.pub-tools { display: grid; gap: var(--s3); }
+.pub-groups { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.pub-groups button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; border: 1.5px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 999px; font: inherit; font-weight: 600; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+.pub-groups button span { font-variant-numeric: tabular-nums; color: var(--ink-3); font-weight: 700; }
+.pub-groups button:hover { border-color: var(--ink-3); }
+.pub-groups button.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.pub-groups button.on span { color: var(--primary); }
+.pub-groups button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pub-filters { margin: 0; }
+.pub-filters [data-cari] { flex: 1 1 240px; }
+.pub-sort { display: flex; align-items: center; gap: var(--s2); margin-left: auto; flex-wrap: wrap; }
+.pub-sort .select { min-width: 190px; }
+.pub-sort [data-arah] { white-space: nowrap; }
+.pub-count { font-size: 14px; flex-wrap: wrap; gap: var(--s2); }
+.pub-table td { vertical-align: top; }
+.pub-table td:nth-child(2) { max-width: 320px; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pub-foot { color: var(--ink-3); font-size: 12.5px; text-align: center; padding-top: var(--s3); border-top: 1px solid var(--line); }
+@media (max-width: 860px) {
+  .pub { padding: var(--s4) var(--s3) var(--s5); gap: var(--s4); }
+  .pub-brand h1 { font-size: 19px; }
+  .pub-stats { grid-template-columns: repeat(2, 1fr); gap: var(--s3); width: 100%; }
+  .pub-groups { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin: 0 calc(-1 * var(--s3)); padding-left: var(--s3); padding-right: var(--s3); scrollbar-width: none; }
+  .pub-groups button { flex: none; }
+  .filters.pub-filters { grid-template-columns: 1fr; }
+  .pub-filters .select, .pub-filters .input { width: 100%; min-width: 0; }
+  .pub-sort { grid-column: 1 / -1; }
+  .pub-sort { margin-left: 0; width: 100%; display: grid; grid-template-columns: 1fr auto; }
+  .pub-sort label { grid-column: 1 / -1; }
+  .pub-sort .select { min-width: 0; }
+  .pub-table td:nth-child(2) { max-width: none; }
+}
+.board-link { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--radius); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); color: #fff; font-weight: 600; font-size: 14px; text-decoration: none; }
+.board-link svg.i { color: #5BD6A8; width: 18px; height: 18px; }
+.board-link:hover { background: rgba(255,255,255,.12); }
+.board-link:focus-visible { outline: 2px solid #5BD6A8; outline-offset: 2px; }

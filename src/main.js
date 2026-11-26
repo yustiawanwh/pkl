@@ -10,6 +10,7 @@ import * as N from './pages/nilai.js';
 import * as S from './pages/pengaturan.js';
 import * as R from './pages/riwayat.js';
 import * as B from './pages/berkas.js';
+import { rekapPublik } from './pages/rekap-publik.js';
 
 const app = document.getElementById('app');
 
@@ -178,6 +179,12 @@ async function route() {
       <p class="muted">Isi <b>VITE_SUPABASE_URL</b> dan <b>VITE_SUPABASE_ANON_KEY</b> (lihat README), lalu build ulang.</p></div></div>`;
     return;
   }
+  // Rekap publik: bisa dibuka siapa saja, login atau tidak, tanpa menu (hanya baca)
+  if (hash === '#/rekap' || hash.startsWith('#/rekap?')) {
+    delete app.dataset.shell;
+    return rekapPublik(app);
+  }
+  document.title = 'Presentasi PKL · RPL';
   if (!state.session) {
     delete app.dataset.shell;
     if (hash !== '#/masuk') { history.replaceState(null, '', '#/masuk'); }

@@ -7,6 +7,8 @@ export async function pengaturan(view, ctx) {
   let poin = structuredClone(state.settings.poin_presentasi || []);
   const pg = state.settings.pengumuman || { aktif: false, isi: '' };
   const kp = state.settings.ttd_kaprog || { tampil: false, nama: '' };
+  const rp = state.settings.rekap_publik || { aktif: true };
+  const rekapUrl = `${location.origin}${location.pathname.replace(/index\.html$/, '')}rekap`;
 
   view.innerHTML = `
     <div class="page-head"><div><h1>Pengaturan</h1><p>Atur cara penilaian, daftar kelas, poin presentasi, dan akun guru.</p></div></div>
@@ -16,6 +18,16 @@ export async function pengaturan(view, ctx) {
           <label class="switch on-primary"><input type="checkbox" name="pg_aktif" ${pg.aktif ? 'checked' : ''} /> Tampilkan</label></div>
         <textarea class="textarea" name="pg_isi" maxlength="500" placeholder="Mis. Batas pengajuan jadwal presentasi: Jumat, 20 November 2026.">${esc(pg.isi || '')}</textarea>
         <div class="row between"><span class="hint" data-pg-count></span><button class="btn primary" data-save-pg>${icon('check')} Simpan pengumuman</button></div>
+      </section>
+
+      <section class="card stack" data-rp>
+        <div class="card-title-row"><div><h2>Halaman rekap publik</h2><p class="muted small mt-xs">Rekap presentasi yang bisa dibuka siapa saja tanpa login dan hanya untuk dilihat. Menampilkan nama, kelas, DUDI, judul, tanggal, tahap, serta nilai akhir dan predikat yang sudah diumumkan. NIS, tanggal lahir, berkas, dan catatan guru tidak pernah ditampilkan.</p></div>
+          <label class="switch on-primary"><input type="checkbox" name="rp_aktif" ${rp.aktif !== false ? 'checked' : ''} /> Aktifkan</label></div>
+        <div class="row" style="flex-wrap:wrap">
+          <input class="input" readonly value="${esc(rekapUrl)}" aria-label="Alamat rekap publik" style="flex:1 1 280px" data-rp-url />
+          <button class="btn ghost" data-rp-copy type="button">${icon('clipboard')} Salin alamat</button>
+          <a class="btn ghost" href="#/rekap" target="_blank" rel="noopener">${icon('eye')} Buka</a>
+        </div>
       </section>
 
       <section class="card stack" data-kp>
@@ -76,6 +88,19 @@ export async function pengaturan(view, ctx) {
     try { await saveSetting('pengumuman', { aktif, isi }); toast(aktif ? 'Pengumuman tampil di halaman awal.' : 'Pengumuman disimpan dan disembunyikan.'); }
     catch (err) { toast(errMsg(err), 'err'); }
   }));
+
+  // ---- rekap publik
+  const rpEl = $('[data-rp]', view);
+  rpEl.querySelector('[name=rp_aktif]').addEventListener('change', async (e) => {
+    const aktif = e.target.checked;
+    try { await saveSetting('rekap_publik', { aktif }); toast(aktif ? 'Halaman rekap publik aktif.' : 'Halaman rekap publik dinonaktifkan.'); }
+    catch (err) { e.target.checked = !aktif; toast(errMsg(err), 'err'); }
+  });
+  $('[data-rp-copy]', rpEl).addEventListener('click', async () => {
+    const inp = $('[data-rp-url]', rpEl);
+    try { await navigator.clipboard.writeText(inp.value); } catch { inp.select(); document.execCommand('copy'); }
+    toast('Alamat rekap disalin.');
+  });
 
   // ---- KKM
   const kkmEl = $('[data-kkm]', view);
